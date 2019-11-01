@@ -189,7 +189,8 @@ public final class OurTabbedSyntaxWidget {
             }
 
             @Override
-            public final void componentHidden(ComponentEvent e) {}
+            public final void componentHidden(ComponentEvent e) {
+            }
         });
     }
 
@@ -277,6 +278,11 @@ public final class OurTabbedSyntaxWidget {
             return null;
         return tabs.get(me).getFilename();
     }
+
+    public List<OurSyntaxWidget> getTabs() {
+        return tabs;
+    }
+
 
     /**
      * Close the i-th tab (if there are no more tabs afterwards, we'll create a new
