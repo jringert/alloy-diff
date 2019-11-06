@@ -114,41 +114,46 @@ public final class DiffExample {
 				sigs.put(sName, mergeSig(v1Sigs.get(sName), v2Sigs.get(sName)));
 			} else {
 				// adding signatures that are unique in v1
-				sigs.put(sName, v1Sigs.get(sName));
+				Sig s = new PrimSig(sName, v1Sigs.get(sName).attributes.toArray(new Attr[] {}));
+				sigs.put(sName, s);
+				// closed world
+				c2 = c2.and(s.no());
 			}
 		}
 		for (String sName : v2Sigs.keySet()) {
 			if (!v1Sigs.containsKey(sName)) {
 				// adding signatures that are unique in v2
-				sigs.put(sName, v2Sigs.get(sName));
+				Sig s = new PrimSig(sName, v2Sigs.get(sName).attributes.toArray(new Attr[] {}));
+				sigs.put(sName, s);
+				// closed world
+				c1 = c1.and(s.no());
 			}
 		}
 
 		return sigs.values();
 	}
 
-	
 	/**
 	 * Creates a merged signature and adds constraints c1 c2 for individual sigs
+	 * 
 	 * @param s1
 	 * @param s2
 	 * @return
 	 */
 	private static Sig mergeSig(Sig s1, Sig s2) {
-		Sig s = new PrimSig(s1.label, getCommonSigAttributes(s1, s2));		
+		Sig s = new PrimSig(s1.label, getCommonSigAttributes(s1, s2));
 		c1 = generateSigAttributeConstraints(s, s1, c1);
 		c2 = generateSigAttributeConstraints(s, s2, c2);
-		
-		//s1.getFieldDecls();
+
+		// s1.getFieldDecls();
 		SafeList<Field> fields1 = s1.getFields();
 		SafeList<Field> fields2 = s2.getFields();
-		
+
 		SafeList<Field> mergedFields = mergeFields(fields1, fields2);
 		for (Field f : mergedFields) {
-			ExprUnary exp = (ExprUnary) f.decl().expr;
-			System.out.println(exp.op == Op.LONEOF);
+			s.addField(f.label, f.decl().expr);
 		}
-		
+
 		return s;
 	}
 
@@ -158,14 +163,22 @@ public final class DiffExample {
 			for (Field field2 : fields2) {
 				ExprUnary expField1 = (ExprUnary) field1.decl().expr;
 				ExprUnary expField2 = (ExprUnary) field2.decl().expr;
-				if (field1.decl().names[0].label == field2.decl().names[0].label) {
-					
+				// change == to equals
+				if (field1.decl().names.get(0).label == field2.decl().names.get(0).label
+						&& field1.decl().expr.type() == field2.decl().expr.type()) {
+					// they have the same name, and association to the same signature
+					if (expField1.op == expField2.op) {
+						// checking here for the same operator type for the field
+						fields.add(field1);
+					} else {
+						// what to do if they are not same?
+						// does it mean that they are inconsistent?
+					}
 				}
 			}
 		}
 		return fields;
 	}
-
 
 	/**
 	 * create constraints for attributes

@@ -2,9 +2,10 @@
 ### 1.  Read both the versions into `Module` objects
 ### 2. Merge the Signatures
 - From both the `Module` objects, create a key value pair (kvp) <signature name, signature object> for all the signatures in both versions into separate lists
-- Read from the above kvps and create a list of merged signatures by adding all the signatures which are unique in either kvp
+- Read from the above kvps and create a list of merged signatures by adding all the signatures which have unique names in either kvp 
 
 	##### ii. Create constraints from Signature attributes
+	- strip attributes from the signature declaration and add them without any attributes
 	- For other (changed) signatures, convert these signatures into constraints, so that instead of running them as signatures, we can combine them and run them as constraints on the model 
 	- The type of attribute of the signature is checked and if the same is available in the attributes of the second signature, it is directly added
 	- If the attributes are not same, we need to manually check and compare the types of attributes and create constraints based on the type of the attribute
@@ -23,3 +24,6 @@
  - facts
  - predicates
  - scopes and multiplicities
+ 
+### Notes / Assumptions
+- we assume that signatures with different names are different interms of semantics (this ignores renaming)

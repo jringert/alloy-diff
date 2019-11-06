@@ -1,7 +1,7 @@
-module b1
+module b2
 
-abstract sig Branch {}
+sig Branch {}
 
 sig Bank{
-  branches: lone Branch
+  branches: one (Branch + Bank)
 }
