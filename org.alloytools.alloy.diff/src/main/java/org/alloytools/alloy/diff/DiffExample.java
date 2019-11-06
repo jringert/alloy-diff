@@ -1,5 +1,6 @@
 package org.alloytools.alloy.diff;
 
+import java.io.ObjectInputStream.GetField;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -9,12 +10,16 @@ import java.util.Map;
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.ErrorWarning;
+import edu.mit.csail.sdg.alloy4.SafeList;
 import edu.mit.csail.sdg.alloy4viz.VizGUI;
 import edu.mit.csail.sdg.ast.Attr;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Expr;
+import edu.mit.csail.sdg.ast.ExprUnary;
+import edu.mit.csail.sdg.ast.ExprUnary.Op;
 import edu.mit.csail.sdg.ast.Module;
 import edu.mit.csail.sdg.ast.Sig;
+import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.ast.Sig.PrimSig;
 import edu.mit.csail.sdg.parser.CompUtil;
 import edu.mit.csail.sdg.translator.A4Options;
@@ -133,8 +138,34 @@ public final class DiffExample {
 		Sig s = new PrimSig(s1.label, getCommonSigAttributes(s1, s2));		
 		c1 = generateSigAttributeConstraints(s, s1, c1);
 		c2 = generateSigAttributeConstraints(s, s2, c2);
+		
+		//s1.getFieldDecls();
+		SafeList<Field> fields1 = s1.getFields();
+		SafeList<Field> fields2 = s2.getFields();
+		
+		SafeList<Field> mergedFields = mergeFields(fields1, fields2);
+		for (Field f : mergedFields) {
+			ExprUnary exp = (ExprUnary) f.decl().expr;
+			System.out.println(exp.op == Op.LONEOF);
+		}
+		
 		return s;
 	}
+
+	private static SafeList<Field> mergeFields(SafeList<Field> fields1, SafeList<Field> fields2) {
+		SafeList<Field> fields = new SafeList<Sig.Field>();
+		for (Field field1 : fields1) {
+			for (Field field2 : fields2) {
+				ExprUnary expField1 = (ExprUnary) field1.decl().expr;
+				ExprUnary expField2 = (ExprUnary) field2.decl().expr;
+				if (field1.decl().names[0].label == field2.decl().names[0].label) {
+					
+				}
+			}
+		}
+		return fields;
+	}
+
 
 	/**
 	 * create constraints for attributes

@@ -21,4 +21,5 @@
  - fields
  - assertions
  - facts
+ - predicates
  - scopes and multiplicities
