@@ -43,7 +43,7 @@ import edu.mit.csail.sdg.ast.Type.ProductType;
 public final class ExprUnary extends Expr {
 
     /** The unary operator. */
-    public final Op   op;
+    public Op         op;
 
     /** The subexpression. */
     public final Expr sub;
@@ -146,6 +146,7 @@ public final class ExprUnary extends Expr {
 
     /** This class contains all possible unary operators. */
     public enum Op {
+
                     /** :some x (where x is a unary set) */
                     SOMEOF("some of"),
                     /** :lone x (where x is a unary set) */

@@ -163,16 +163,76 @@ public final class DiffExample {
 			for (Field field2 : fields2) {
 				ExprUnary expField1 = (ExprUnary) field1.decl().expr;
 				ExprUnary expField2 = (ExprUnary) field2.decl().expr;
-				// change == to equals
-				if (field1.decl().names.get(0).label == field2.decl().names.get(0).label
-						&& field1.decl().expr.type() == field2.decl().expr.type()) {
-					// they have the same name, and association to the same signature
+				if (field1.label.equals(field2.label) && field1.type().toString().equals(field2.type().toString())) {
 					if (expField1.op == expField2.op) {
-						// checking here for the same operator type for the field
+						// they have the same name, and same type and same operator
 						fields.add(field1);
 					} else {
-						// what to do if they are not same?
-						// does it mean that they are inconsistent?
+						// names are same and type is same but the operator is not same
+						switch (expField1.op) {
+						case SETOF: {
+							fields.add(field1);
+							break;
+						}
+						case SOMEOF: {
+							//Field mergedField = new Field(null, null, null, null, null, field1.sig, field1.label, expField1);
+							switch (expField2.op) {
+							case SETOF:
+								expField1.op = Op.SETOF;
+								fields.add(new Field(null, null, null, null, null, field1.sig, field1.label,
+										expField1));
+							case LONEOF:
+								expField1.op = Op.SETOF;
+								fields.add(new Field(null, null, null, null, null, field1.sig, field1.label,
+										expField1));
+								break;
+							default:								
+								break;
+							}
+						}
+						case LONEOF:
+							switch (expField2.op) {
+							case SETOF:
+								expField1.op = Op.SETOF;
+								fields.add(new Field(null, null, null, null, null, field1.sig, field1.label,
+										expField1));
+							case SOMEOF:
+								expField1.op = Op.SETOF;
+								fields.add(new Field(null, null, null, null, null, field1.sig, field1.label,
+										expField1));
+								break;
+							default:
+								expField1.op = Op.LONEOF;
+								fields.add(new Field(null, null, null, null, null, field1.sig, field1.label,
+										expField1));
+								break;
+							}
+							break;
+						case ONEOF:
+							switch (expField2.op) {
+							case SETOF:
+								expField1.op = Op.SETOF;
+								fields.add(new Field(null, null, null, null, null, field1.sig, field1.label,
+										expField1));
+							case SOMEOF:
+								expField1.op = Op.SOMEOF;
+								fields.add(new Field(null, null, null, null, null, field1.sig, field1.label,
+										expField1));
+								break;
+							case LONEOF:
+								expField1.op = Op.LONEOF;
+								fields.add(new Field(null, null, null, null, null, field1.sig, field1.label,
+										expField1));
+								break;
+							default:
+								
+								break;
+							}
+							break;
+						default:
+							break;
+						}
+
 					}
 				}
 			}

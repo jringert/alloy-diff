@@ -3,5 +3,5 @@ module b2
 sig Branch {}
 
 sig Bank{
-  branches: one (Branch + Bank)
+  branches: some (Branch + Bank)
 }

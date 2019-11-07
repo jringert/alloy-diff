@@ -27,3 +27,8 @@
  
 ### Notes / Assumptions
 - we assume that signatures with different names are different interms of semantics (this ignores renaming)
+
+
+## Questions
+- when checking for the operators of fields, as the operator fields are final, they are not updatable. so I have changed them to remove the final modifier on the Field object
+- had to change constructor of Field from private to public
