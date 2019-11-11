@@ -149,95 +149,74 @@ public final class DiffExample {
 		SafeList<Field> fields1 = s1.getFields();
 		SafeList<Field> fields2 = s2.getFields();
 
-		SafeList<Field> mergedFields = mergeFields(fields1, fields2);
-		for (Field f : mergedFields) {
-			s.addField(f.label, f.decl().expr);
-		}
-
+		mergeFields(s, fields1, fields2);
+		
 		return s;
 	}
 
-	private static SafeList<Field> mergeFields(SafeList<Field> fields1, SafeList<Field> fields2) {
-		SafeList<Field> fields = new SafeList<Sig.Field>();
+	private static void mergeFields(Sig mergedSig, SafeList<Field> fields1, SafeList<Field> fields2) {
 		for (Field field1 : fields1) {
 			for (Field field2 : fields2) {
 				ExprUnary expField1 = (ExprUnary) field1.decl().expr;
 				ExprUnary expField2 = (ExprUnary) field2.decl().expr;
-				if (field1.label.equals(field2.label) && field1.type().toString().equals(field2.type().toString())) {
-					if (expField1.op == expField2.op) {
-						// they have the same name, and same type and same operator
-						fields.add(field1);
-					} else {
-						// names are same and type is same but the operator is not same
-						switch (expField1.op) {
-						case SETOF: {
-							fields.add(field1);
+				if (field1.label.equals(field2.label)) {
+					Expr union = expField1.sub.plus(expField2.sub);
+					// names are same and type is same but the operator is not same
+					switch (expField1.op) {
+					case SETOF: {
+						mergedSig.addField(field1.label, union.setOf());
+						break;
+					}
+					case SOMEOF: {
+						switch (expField2.op) {
+						case SETOF:
+							mergedSig.addField(field1.label, union.setOf());
 							break;
-						}
-						case SOMEOF: {
-							//Field mergedField = new Field(null, null, null, null, null, field1.sig, field1.label, expField1);
-							switch (expField2.op) {
-							case SETOF:
-								expField1.op = Op.SETOF;
-								fields.add(new Field(null, null, null, null, null, field1.sig, field1.label,
-										expField1));
-							case LONEOF:
-								expField1.op = Op.SETOF;
-								fields.add(new Field(null, null, null, null, null, field1.sig, field1.label,
-										expField1));
-								break;
-							default:								
-								break;
-							}
-						}
 						case LONEOF:
-							switch (expField2.op) {
-							case SETOF:
-								expField1.op = Op.SETOF;
-								fields.add(new Field(null, null, null, null, null, field1.sig, field1.label,
-										expField1));
-							case SOMEOF:
-								expField1.op = Op.SETOF;
-								fields.add(new Field(null, null, null, null, null, field1.sig, field1.label,
-										expField1));
-								break;
-							default:
-								expField1.op = Op.LONEOF;
-								fields.add(new Field(null, null, null, null, null, field1.sig, field1.label,
-										expField1));
-								break;
-							}
-							break;
-						case ONEOF:
-							switch (expField2.op) {
-							case SETOF:
-								expField1.op = Op.SETOF;
-								fields.add(new Field(null, null, null, null, null, field1.sig, field1.label,
-										expField1));
-							case SOMEOF:
-								expField1.op = Op.SOMEOF;
-								fields.add(new Field(null, null, null, null, null, field1.sig, field1.label,
-										expField1));
-								break;
-							case LONEOF:
-								expField1.op = Op.LONEOF;
-								fields.add(new Field(null, null, null, null, null, field1.sig, field1.label,
-										expField1));
-								break;
-							default:
-								
-								break;
-							}
+							mergedSig.addField(field1.label, union.setOf());
 							break;
 						default:
+							// this covers both the some and the one operator
+							mergedSig.addField(field1.label, union.someOf());
 							break;
 						}
-
+					}
+					case LONEOF:
+						switch (expField2.op) {
+						case SETOF:
+							mergedSig.addField(field1.label, union.setOf());
+							break;
+						case SOMEOF:
+							mergedSig.addField(field1.label, union.setOf());
+							break;
+						default:
+							// this covers both the lone and the one operator
+							mergedSig.addField(field1.label, union.loneOf());
+							break;
+						}
+						break;
+					case ONEOF:
+						switch (expField2.op) {
+						case SETOF:
+							mergedSig.addField(field1.label, union.setOf());
+							break;
+						case SOMEOF:
+							mergedSig.addField(field1.label, union.someOf());
+							break;
+						case LONEOF:
+							mergedSig.addField(field1.label, union.loneOf());
+							break;
+						default:
+							mergedSig.addField(field1.label, union.oneOf());
+							break;
+						}
+						break;
+					default:
+						break;
 					}
 				}
 			}
 		}
-		return fields;
 	}
 
 	/**
