@@ -1,5 +1,7 @@
 package org.alloytools.alloy.diff;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.ObjectInputStream.GetField;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -14,6 +16,7 @@ import edu.mit.csail.sdg.alloy4.SafeList;
 import edu.mit.csail.sdg.alloy4viz.VizGUI;
 import edu.mit.csail.sdg.ast.Attr;
 import edu.mit.csail.sdg.ast.Command;
+import edu.mit.csail.sdg.ast.Decl;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.ExprUnary;
 import edu.mit.csail.sdg.ast.ExprUnary.Op;
@@ -57,7 +60,8 @@ public final class DiffExample {
 		c2 = Sig.UNIV.equal(Sig.UNIV);
 		Collection<Sig> sigs = mergeSigs(v1, v2);
 
-		Command diffCommand = new Command(false, -1, -1, -1, c2.and(c1.not()));
+//		Command diffCommand = new Command(false, -1, -1, -1, c2.and(c1.not()));
+		Command diffCommand = new Command(false, -1, -1, -1, Sig.UNIV.equal(Sig.UNIV));
 
 		// Execute the command
 		System.out.println("============ Command " + diffCommand + ": ============");
@@ -130,7 +134,70 @@ public final class DiffExample {
 			}
 		}
 
+		for (String sName : sigs.keySet()) {
+			Sig s = sigs.get(sName);
+
+			Sig s1 = v1Sigs.get(sName);
+			Sig s2 = v2Sigs.get(sName);
+			if (s1 != null && s2 != null) {
+				mergeFields(s, s1.getFields(), s2.getFields());
+			} else if (s1 != null) {
+				addFields(s, s1.getFields());
+			} else {
+				addFields(s, s2.getFields());
+			}
+		}
+
 		return sigs.values();
+	}
+
+	private static void addFields(Sig s, SafeList<Field> fields) {
+		for (Field f : fields) {
+			s.addField(f.label, replaceSigRefs(f.decl().expr));
+		}
+	}
+
+	/**
+	 * Replaces occurrences of old signatures in the expression by the merged
+	 * signatures
+	 * 
+	 * @param expr the one that comes from the field declaration
+	 * @return
+	 */
+	private static Expr replaceSigRefs(Expr expr) {
+		ExprUnary e = (ExprUnary) expr;
+		Op op = e.op;
+		e = (ExprUnary) e.sub;
+		Sig s = (Sig) e.sub;
+		Sig us = sigs.get(s.label);
+		switch (op) {
+		case SOMEOF:
+			return us.someOf();
+
+		default:
+			System.out.println("XXX");
+			break;
+		}
+		return null;
+	}
+
+	/**
+	 * Sets a field of the object to the new value (using reflection)
+	 * 
+	 * @param o
+	 * @param fieldName
+	 * @param updated
+	 */
+	private static void set(Object o, String fieldName, Expr updated) {
+		java.lang.reflect.Field f = null;
+		try {
+			f = o.getClass().getDeclaredField(fieldName);
+			f.setAccessible(true);
+			f.set(o, updated);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -145,78 +212,57 @@ public final class DiffExample {
 		c1 = generateSigAttributeConstraints(s, s1, c1);
 		c2 = generateSigAttributeConstraints(s, s2, c2);
 
-		// s1.getFieldDecls();
-		SafeList<Field> fields1 = s1.getFields();
-		SafeList<Field> fields2 = s2.getFields();
-
-		mergeFields(s, fields1, fields2);
-		
 		return s;
 	}
 
+	/**
+	 * TODO this method doesn't work if there are no fields in either signature
+	 * versions
+	 * 
+	 * @param mergedSig
+	 * @param fields1
+	 * @param fields2
+	 */
+
 	private static void mergeFields(Sig mergedSig, SafeList<Field> fields1, SafeList<Field> fields2) {
 		for (Field field1 : fields1) {
-			for (Field field2 : fields2) {
-				ExprUnary expField1 = (ExprUnary) field1.decl().expr;
-				ExprUnary expField2 = (ExprUnary) field2.decl().expr;
-				if (field1.label.equals(field2.label)) {
-					Expr union = expField1.sub.plus(expField2.sub);
-					// names are same and type is same but the operator is not same
-					switch (expField1.op) {
-					case SETOF: {
-						mergedSig.addField(field1.label, union.setOf());
-						break;
-					}
-					case SOMEOF: {
-						switch (expField2.op) {
-						case SETOF:
-							mergedSig.addField(field1.label, union.setOf());
-							break;
-						case LONEOF:
-							mergedSig.addField(field1.label, union.setOf());
-							break;
-						default:
-							// this covers both the some and the one operator
-							mergedSig.addField(field1.label, union.someOf());
-							break;
-						}
-					}
-					case LONEOF:
-						switch (expField2.op) {
-						case SETOF:
-							mergedSig.addField(field1.label, union.setOf());
-							break;
-						case SOMEOF:
-							mergedSig.addField(field1.label, union.setOf());
-							break;
-						default:
-							// this covers both the lone and the one operator
-							mergedSig.addField(field1.label, union.loneOf());
-							break;
-						}
-						break;
-					case ONEOF:
-						switch (expField2.op) {
-						case SETOF:
-							mergedSig.addField(field1.label, union.setOf());
-							break;
-						case SOMEOF:
-							mergedSig.addField(field1.label, union.someOf());
-							break;
-						case LONEOF:
-							mergedSig.addField(field1.label, union.loneOf());
-							break;
-						default:
-							mergedSig.addField(field1.label, union.oneOf());
-							break;
-						}
-						break;
-					default:
-						break;
-					}
-				}
-			}
+			mergedSig.addField(field1.label, replaceSigRefs(field1.decl().expr));
 		}
+		/*
+		 * for (Field field1 : fields1) { for (Field field2 : fields2) { ExprUnary
+		 * expField1 = (ExprUnary) field1.decl().expr; ExprUnary expField2 = (ExprUnary)
+		 * field2.decl().expr; if (field1.label.equals(field2.label)) { Expr union =
+		 * expField1.sub.plus(expField2.sub); // names are same and type is same but the
+		 * operator is not same switch (expField1.op) { case SETOF:
+		 * mergedSig.addField(field1.label, union.setOf()); break; case SOMEOF: switch
+		 * (expField2.op) { case SETOF: mergedSig.addField(field1.label, union.setOf());
+		 * break; case LONEOF: mergedSig.addField(field1.label, union.setOf()); break;
+		 * default: // this covers both the some and the one operator
+		 * mergedSig.addField(field1.label, union.someOf()); break; } break; case
+		 * LONEOF: switch (expField2.op) { case SETOF: mergedSig.addField(field1.label,
+		 * union.setOf()); break; case SOMEOF: mergedSig.addField(field1.label,
+		 * union.setOf()); break; default: // this covers both the lone and the one
+		 * operator mergedSig.addField(field1.label, union.loneOf()); break; } break;
+		 * case ONEOF: switch (expField2.op) { case SETOF:
+		 * mergedSig.addField(field1.label, union.setOf()); break; case SOMEOF:
+		 * mergedSig.addField(field1.label, union.someOf()); break; case LONEOF:
+		 * mergedSig.addField(field1.label, union.loneOf()); break; default: // this
+		 * covers the one operator mergedSig.addField(field1.label, union.oneOf());
+		 * break; } break; default: break; } } else { // the field names don't match //
+		 * adding field1 switch (expField1.op) { case ONEOF:
+		 * mergedSig.addField(field1.label, expField1.sub.loneOf()); break; case SOMEOF:
+		 * mergedSig.addField(field1.label, expField1.sub.setOf()); break; default: //
+		 * this handles both set and lone mergedSig.addField(field1.label,
+		 * expField1.sub); break; }
+		 * 
+		 * // adding field2 switch (expField2.op) { case ONEOF:
+		 * mergedSig.addField(field2.label, expField2.sub.loneOf()); break; case SOMEOF:
+		 * mergedSig.addField(field2.label, expField2.sub.setOf()); break; default: //
+		 * this handles both set and lone mergedSig.addField(field2.label,
+		 * expField2.sub); break; } } } }
+		 */
+		
+		
 	}
 
 	/**

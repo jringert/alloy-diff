@@ -12,10 +12,15 @@
 </sig>
 
 <sig label="this/Bank" ID="4" parentID="2">
+   <atom label="Bank$0"/>
 </sig>
 
-<sig label="this/Branch" ID="5" parentID="2">
-   <atom label="Branch$0"/>
+<field label="branches" ID="5" parentID="4">
+   <tuple> <atom label="Bank$0"/> <atom label="Bank$0"/> </tuple>
+   <types> <type ID="4"/> <type ID="4"/> </types>
+</field>
+
+<sig label="this/Branch" ID="6" parentID="2">
 </sig>
 
 <sig label="univ" ID="2" builtin="yes">

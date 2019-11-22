@@ -24,7 +24,6 @@
  - facts
  - predicates
  - scopes and multiplicities
- 
 ### Notes / Assumptions
 - we assume that signatures with different names are different interms of semantics (this ignores renaming)
 
