@@ -9,7 +9,7 @@ sig FileSystem {
   root: Dir,
   live: set FSObject,
   contents: Dir lone-> FSObject,
-  parent: FSObject ->lone Dir
+  parent: FSObject ->lone File
 }{
   // root has no parent
   no root.parent

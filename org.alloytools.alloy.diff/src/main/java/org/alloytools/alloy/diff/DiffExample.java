@@ -36,8 +36,8 @@ public final class DiffExample {
 //		Module v1 = CompUtil.parseEverything_fromFile(rep, null, "misc/multiplicities/oneBank.als");
 //		Module v2 = CompUtil.parseEverything_fromFile(rep, null, "misc/multiplicities/Bank.als");
 
-		Module v1 = CompUtil.parseEverything_fromFile(rep, null, "misc/File1.als");
-		Module v2 = CompUtil.parseEverything_fromFile(rep, null, "misc/File2.als");
+		Module v2 = CompUtil.parseEverything_fromFile(rep, null, "misc/File1.als");
+		Module v1 = CompUtil.parseEverything_fromFile(rep, null, "misc/File2.als");
 
 		// Choose some default options for how you want to execute the
 		// commands
@@ -52,7 +52,10 @@ public final class DiffExample {
 		
 		
 
+		System.out.println(m.c1);
+		System.out.println(m.c2);
 		Command diffCommand = new Command(false, -1, -1, -1, m.c2.and(m.c1.not()));
+		
 //		Command diffCommand = new Command(false, -1, -1, -1, ExprConstant.TRUE);
 
 		// Execute the command

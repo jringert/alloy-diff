@@ -6,15 +6,15 @@ sig File, Dir extends FSObject { }
 
 // A File System
 sig FileSystem {
-  root: Dir,
-  live: set FSObject,
+  //root: Dir,
+  live: some FSObject,
   contents: Dir lone-> FSObject,
   parent: FSObject ->lone Dir
 }{
   // root has no parent
-  no root.parent
+  //no root.parent
   // live objects are reachable from the root
-  live in root.*contents
+  //live in root.*contents
   // parent is the inverse of contents
   parent = ~contents
 }
