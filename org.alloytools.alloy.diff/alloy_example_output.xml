@@ -16,18 +16,17 @@
 </sig>
 
 <field label="branches" ID="5" parentID="4">
-   <tuple> <atom label="Bank$0"/> <atom label="Bank$0"/> </tuple>
+   <tuple> <atom label="Bank$0"/> <atom label="Branch$0"/> </tuple>
+   <tuple> <atom label="Bank$0"/> <atom label="Branch$1"/> </tuple>
+   <tuple> <atom label="Bank$0"/> <atom label="Branch$2"/> </tuple>
    <types> <type ID="4"/> <type ID="6"/> </types>
-   <types> <type ID="4"/> <type ID="4"/> </types>
 </field>
 
 <sig label="this/Branch" ID="6" parentID="2">
    <atom label="Branch$0"/>
+   <atom label="Branch$1"/>
+   <atom label="Branch$2"/>
 </sig>
 
 <sig label="univ" ID="2" builtin="yes">
 </sig>
-
-</instance>
-
-</alloy>

@@ -1,0 +1,5 @@
+module oneBank
+
+sig Bank{
+  
+}

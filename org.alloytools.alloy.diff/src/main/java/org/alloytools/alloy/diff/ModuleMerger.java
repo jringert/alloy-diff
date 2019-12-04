@@ -1,0 +1,357 @@
+package org.alloytools.alloy.diff;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import edu.mit.csail.sdg.alloy4.ConstList;
+import edu.mit.csail.sdg.alloy4.SafeList;
+import edu.mit.csail.sdg.ast.Attr;
+import edu.mit.csail.sdg.ast.Command;
+import edu.mit.csail.sdg.ast.Decl;
+import edu.mit.csail.sdg.ast.Expr;
+import edu.mit.csail.sdg.ast.ExprBinary;
+import edu.mit.csail.sdg.ast.ExprConstant;
+import edu.mit.csail.sdg.ast.ExprHasName;
+import edu.mit.csail.sdg.ast.ExprList;
+import edu.mit.csail.sdg.ast.ExprList.Op;
+import edu.mit.csail.sdg.ast.ExprQt;
+import edu.mit.csail.sdg.ast.ExprUnary;
+import edu.mit.csail.sdg.ast.ExprVar;
+import edu.mit.csail.sdg.ast.Module;
+import edu.mit.csail.sdg.ast.Sig;
+import edu.mit.csail.sdg.ast.Sig.Field;
+import edu.mit.csail.sdg.ast.Sig.PrimSig;
+import edu.mit.csail.sdg.ast.Type.ProductType;
+import edu.mit.csail.sdg.ast.Type;
+
+public class ModuleMerger {
+
+	protected Map<String, Sig> sigs;
+	protected Expr c1 = ExprConstant.TRUE;
+	protected Expr c2 = ExprConstant.TRUE;
+
+	/**
+	 * Merges signatures from v1 and v2 by creating combined Sigs for common
+	 * signatures and copying unique signatures
+	 * 
+	 * @param v1
+	 * @param v2
+	 * @return
+	 */
+	public Collection<Sig> mergeSigs(Module v1, Module v2) {
+		sigs = new HashMap<>();
+		Map<String, Sig> v1Sigs = new HashMap<>();
+		Map<String, Sig> v2Sigs = new HashMap<>();
+
+		// fill look-up tables
+		for (Sig s : v1.getAllSigs()) {
+			v1Sigs.put(s.toString(), s);
+		}
+		for (Sig s : v2.getAllSigs()) {
+			v2Sigs.put(s.toString(), s);
+		}
+
+		// do merge
+		for (String sName : v1Sigs.keySet()) {
+			if (v2Sigs.containsKey(sName)) {
+				// create a merged signature
+				sigs.put(sName, mergeSig(v1Sigs.get(sName), v2Sigs.get(sName)));
+			} else {
+				// adding signatures that are unique in v1
+				Sig s = new PrimSig(sName, v1Sigs.get(sName).attributes.toArray(new Attr[] {}));
+				sigs.put(sName, s);
+				// closed world
+				c2 = c2.and(s.no());
+			}
+		}
+		for (String sName : v2Sigs.keySet()) {
+			if (!v1Sigs.containsKey(sName)) {
+				// adding signatures that are unique in v2
+				Sig s = new PrimSig(sName, v2Sigs.get(sName).attributes.toArray(new Attr[] {}));
+				sigs.put(sName, s);
+				// closed world
+				c1 = c1.and(s.no());
+			}
+		}
+
+		for (String sName : sigs.keySet()) {
+			Sig s = sigs.get(sName);
+
+			Sig s1 = v1Sigs.get(sName);
+			Sig s2 = v2Sigs.get(sName);
+			if (s1 != null && s2 != null) {
+				mergeFields(s, s1.getFields(), s2.getFields());
+			} else if (s1 != null) {
+				addFields(s, s1.getFields());
+			} else {
+				addFields(s, s2.getFields());
+			}
+		}
+
+		return sigs.values();
+	}
+
+	private void addFields(Sig s, SafeList<Field> fields) {
+		for (Field f : fields) {
+			s.addField(f.label, replaceSigRefs(f.decl().expr));
+		}
+	}
+
+	private List<ExprHasName> replaceSigRefs(ConstList<? extends ExprHasName> es) {
+		List<ExprHasName> l = new ArrayList<>();
+		for (Expr e : es) {
+			l.add((ExprHasName)replaceSigRefs(e));
+		}
+		return l;
+	}
+
+	/**
+	 * Replaces occurrences of old signatures in the expression by the merged
+	 * signatures
+	 * 
+	 * @param expr
+	 * @return
+	 */
+	private Expr replaceSigRefs(Expr expr) {
+		switch (expr.getClass().getSimpleName()) {
+		case "ExprUnary":
+			ExprUnary ue = (ExprUnary) expr;
+			return ue.op.make(ue.pos, replaceSigRefs(ue.sub));
+		case "ExprBinary":
+			ExprBinary be = (ExprBinary) expr;
+			return be.op.make(be.pos, be.closingBracket, replaceSigRefs(be.left), replaceSigRefs(be.right));
+		case "PrimSig":
+			PrimSig ps = (PrimSig) expr;
+			return sigs.get(ps.label);
+		case "ExprList":
+			ExprList el = (ExprList) expr;
+			List<Expr> l = new ArrayList<Expr>();
+			for (Expr e : el.args) {
+				l.add(replaceSigRefs(e));
+			}
+			return ExprList.make(el.pos, el.closingBracket, Op.AND, l);
+		case "ExprQt":
+			ExprQt eq = (ExprQt) expr;
+			List<Decl> decls = new ArrayList<Decl>();
+			for (Decl d : eq.decls) {
+				decls.add(new Decl(d.isPrivate, d.disjoint, d.disjoint2, replaceSigRefs(d.names),
+						replaceSigRefs(d.expr)));
+			}
+			return eq.op.make(eq.pos, eq.closingBracket, decls, replaceSigRefs(eq.sub));
+		case "ExprVar":
+			ExprVar ev = (ExprVar) expr;
+			Type t = ev.type();
+			ExprVar ret = ExprVar.make(ev.pos, ev.label, replaceSigRefs(t)); 
+			return ret;
+		case "Field":
+			Field f = (Field) expr;
+			return getField(sigs.get(f.sig.label), f.label);
+		default:
+			throw new RuntimeException(expr.getClass().getSimpleName());
+		}
+	}
+
+	private Type replaceSigRefs(Type t) {
+		for (ProductType pt : t) {
+			if (pt.arity() != 1) {
+				throw new RuntimeException();
+			}
+			for (int i = 0; i< pt.arity(); i++) {
+				Sig s = sigs.get(pt.get(i).label);
+				return s.type();
+			}
+		}
+		throw new RuntimeException();		
+	}
+
+	private Expr getField(Sig sig, String label) {
+		for (Field f : sig.getFields()) {
+			if (f.label.equals(label)) {
+				return f;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Creates a merged signature and adds constraints c1 c2 for individual sigs
+	 * 
+	 * @param s1
+	 * @param s2
+	 * @return
+	 */
+	private Sig mergeSig(Sig s1, Sig s2) {
+		Sig s = new PrimSig(s1.label, getCommonSigAttributes(s1, s2));
+		c1 = generateSigAttributeConstraints(s, s1, c1);
+		c2 = generateSigAttributeConstraints(s, s2, c2);
+
+		return s;
+	}
+
+	/**
+	 * TODO this method doesn't work if there are no fields in either signature
+	 * versions
+	 * 
+	 * @param mergedSig
+	 * @param fields1
+	 * @param fields2
+	 */
+
+	private void mergeFields(Sig mergedSig, SafeList<Field> fields1, SafeList<Field> fields2) {
+
+		for (Field field1 : fields1) {
+			for (Field field2 : fields2) {
+				ExprUnary expField1 = (ExprUnary) replaceSigRefs(field1.decl().expr);
+				ExprUnary expField2 = (ExprUnary) replaceSigRefs(field2.decl().expr);
+				if (field1.label.equals(field2.label)) {
+					Expr union = expField1.sub.plus(expField2.sub);
+					Field f;
+					// names are same and type is same but the operator is not same
+					switch (expField1.op) {
+					case SETOF:
+						mergedSig.addField(field1.label, union.setOf());
+						break;
+					case SOMEOF:
+						switch (expField2.op) {
+						case SETOF:
+							f = mergedSig.addField(field1.label, union.setOf());
+							// all s : mergedSig | some s.field
+							c1 = c1.and(f.some());
+							break;
+						case LONEOF:
+							f = mergedSig.addField(field1.label, union.setOf());
+							c1 = c1.and(f.some());
+							c2 = c2.and(f.lone());
+							break;
+						default:
+							// this covers both the some and the one operator
+							mergedSig.addField(field1.label, union.someOf());
+							break;
+						}
+						break;
+					case LONEOF:
+						switch (expField2.op) {
+						case SETOF:
+							mergedSig.addField(field1.label, union.setOf());
+							break;
+						case SOMEOF:
+							mergedSig.addField(field1.label, union.setOf());
+							break;
+						default:
+							// this covers both the lone and the one operator
+							mergedSig.addField(field1.label, union.loneOf());
+							break;
+						}
+						break;
+					case ONEOF:
+						switch (expField2.op) {
+						case SETOF:
+							mergedSig.addField(field1.label, union.setOf());
+							break;
+						case SOMEOF:
+							mergedSig.addField(field1.label, union.someOf());
+							break;
+						case LONEOF:
+							mergedSig.addField(field1.label, union.loneOf());
+							break;
+						default:
+							// this covers the one operator
+							mergedSig.addField(field1.label, union.oneOf());
+							break;
+						}
+						break;
+					default:
+						break;
+					}
+				} else {
+					// the field names don't match
+					// adding field1
+					switch (expField1.op) {
+					case ONEOF:
+						mergedSig.addField(field1.label, expField1.sub.loneOf());
+						break;
+					case SOMEOF:
+						mergedSig.addField(field1.label, expField1.sub.setOf());
+						break;
+					default:
+						// this handles both set and lone
+						mergedSig.addField(field1.label, expField1.sub);
+						break;
+					}
+
+					// adding field2
+					switch (expField2.op) {
+					case ONEOF:
+						mergedSig.addField(field2.label, expField2.sub.loneOf());
+						break;
+					case SOMEOF:
+						mergedSig.addField(field2.label, expField2.sub.setOf());
+						break;
+					default:
+						// this handles both set and lone
+						mergedSig.addField(field2.label, expField2.sub);
+						break;
+					}
+				}
+			}
+		}
+
+	}
+
+	/**
+	 * create constraints for attributes
+	 * 
+	 * FIXME add the additional attributes
+	 * 
+	 * @param s
+	 * @param old
+	 * @param c
+	 * @return
+	 */
+	private Expr generateSigAttributeConstraints(Sig s, Sig old, Expr c) {
+		if (old.isAbstract != null && s.isAbstract == null) {
+			c = c.and(s.no());
+		}
+
+		if (old.isLone != null && s.isLone == null) {
+			c = c.and(s.lone());
+		}
+
+		if (old.isOne != null && s.isOne == null) {
+			c = c.and(s.one());
+		}
+
+		if (old.isSome != null && s.isSome == null) {
+			c = c.and(s.some());
+		}
+
+		return c;
+	}
+
+	/**
+	 * keep all common attributes
+	 * 
+	 * @param s1
+	 * @param s2
+	 * @return
+	 */
+	private Attr[] getCommonSigAttributes(Sig s1, Sig s2) {
+		List<Attr> attrs = new ArrayList<>();
+		for (Attr a1 : s1.attributes) {
+			for (Attr a2 : s2.attributes) {
+				if (a1 != null && a2 != null && a1.type.equals(a2.type)) {
+					attrs.add(new Attr(a1.type, null));
+				}
+			}
+		}
+		return attrs.toArray(new Attr[] {});
+	}
+
+	public void mergeCommands(Command cmd1, Command cmd2) {
+		c1 = c1.and(replaceSigRefs(cmd1.formula));
+		c2 = c2.and(replaceSigRefs(cmd2.formula));
+	}
+}

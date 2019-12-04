@@ -1,9 +1,17 @@
 module b2
 
-sig Branch {}
+sig Object{}
+
+sig Branch extends Object {}
 
 sig Bank{
   branches: some (Branch + Bank)
-} {
-  no branches
 }
+
+pred xxx {
+	no Object
+}
+
+fact {Branch + Bank = Object}
+
+run xxx for 4
