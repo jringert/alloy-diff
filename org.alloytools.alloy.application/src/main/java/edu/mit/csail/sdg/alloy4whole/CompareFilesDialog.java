@@ -15,10 +15,8 @@ import javax.swing.AbstractListModel;
 import javax.swing.BoundedRangeModel;
 import javax.swing.ComboBoxModel;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
-import javax.swing.JDialog;
 import javax.swing.JEditorPane;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -29,7 +27,6 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.plaf.basic.BasicComboBoxRenderer;
 
-import edu.mit.csail.sdg.alloy4.A4Preferences.BooleanPref;
 import edu.mit.csail.sdg.alloy4.A4Preferences.ChoicePref;
 import edu.mit.csail.sdg.alloy4.A4Preferences.Pref;
 import edu.mit.csail.sdg.alloy4.A4Preferences.StringChoicePref;
@@ -191,8 +188,8 @@ public class CompareFilesDialog extends JFrame {
             tabListNames.add(tab.getFilename());
         }
 
-        StringChoicePref tabNamesRight = new StringChoicePref("LeftFile", "Left File", tabListNames);
-        StringChoicePref tabNamesLeft = new StringChoicePref("RightFile", "Right File", tabListNames);
+        StringChoicePref tabNamesLeft = new StringChoicePref("LeftFile", "Left File", tabListNames);
+        StringChoicePref tabNamesRight = new StringChoicePref("RightFile", "Right File", tabListNames);
 
         JButton compareButton = new JButton("Compare");
 
@@ -213,34 +210,20 @@ public class CompareFilesDialog extends JFrame {
         setResizable(false);
         setLocationRelativeTo(null);
         setAlwaysOnTop(true);
-        JFrame j = this;
+
         compareButton.addActionListener(new ActionListener() {
 
-            public void actionPerformed(ActionEvent e) {
-                // display/center the jdialog when the button is pressed
-                JDialog d = new JDialog(j, "this");
+            int leftIndex  = tabNamesLeft.getSelectedIndex();
+            int rightIndex = tabNamesRight.getSelectedIndex();
 
-                d.setLocationRelativeTo(tab);
-                d.setVisible(true);
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // TODO Auto-generated method stub
+
             }
         });
     }
-
-    protected JCheckBox mkCheckBox(final BooleanPref pref) {
-        final JCheckBox cb = make(new JCheckBox(pref.getTitleAction()));
-        pref2comp.put(pref, cb);
-        ChangeListener ctrl = new ChangeListener() {
-
-            @Override
-            public void stateChanged(ChangeEvent e) {
-                cb.setSelected(pref.get());
-            }
-        };
-        pref.addChangeListener(ctrl);
-        ctrl.stateChanged(null);
-        return cb;
-    }
-
 
     @SuppressWarnings({
                        "unchecked"
