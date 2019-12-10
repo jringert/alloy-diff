@@ -8,8 +8,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.ConstList;
+import edu.mit.csail.sdg.alloy4.ErrorWarning;
 import edu.mit.csail.sdg.alloy4.SafeList;
+import edu.mit.csail.sdg.alloy4viz.VizGUI;
 import edu.mit.csail.sdg.ast.Attr;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Decl;
@@ -28,13 +31,78 @@ import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.ast.Sig.PrimSig;
 import edu.mit.csail.sdg.ast.Type;
 import edu.mit.csail.sdg.ast.Type.ProductType;
+import edu.mit.csail.sdg.parser.CompUtil;
+import edu.mit.csail.sdg.translator.A4Options;
+import edu.mit.csail.sdg.translator.A4Solution;
+import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 
 public class ModuleMerger {
 
 	protected Map<String, Sig> sigs;
 	protected Expr c1 = ExprConstant.TRUE;
 	protected Expr c2 = ExprConstant.TRUE;
+public ModuleMerger() {
+		
+	}
+	
+	public ModuleMerger(String leftFile, String rightFile) {
+		VizGUI viz = null;
 
+		A4Reporter rep = new A4Reporter() {
+			@Override
+			public void warning(ErrorWarning msg) {
+				System.out.print("Relevance Warning:\n" + (msg.toString().trim()) + "\n\n");
+				System.out.flush();
+			}
+		};
+
+//		Module v1 = CompUtil.parseEverything_fromFile(rep, null, "misc/multiplicities/oneBank.als");
+//		Module v2 = CompUtil.parseEverything_fromFile(rep, null, "misc/multiplicities/Bank.als");
+
+		Module v1 = CompUtil.parseEverything_fromFile(rep, null, leftFile);
+		Module v2 = CompUtil.parseEverything_fromFile(rep, null, rightFile);
+
+		// Choose some default options for how you want to execute the
+		// commands
+		A4Options options = new A4Options();
+
+		options.solver = A4Options.SatSolver.SAT4J;
+
+		
+		
+		Collection<Sig> sigs = mergeSigs(v1, v2);
+		mergeCommands(v1.getAllCommands().get(0), v2.getAllCommands().get(0));
+		
+		
+
+		System.out.println(c1);
+		System.out.println(c2);
+		Command diffCommand = new Command(false, -1, -1, -1, c2.and(c1.not()));
+		
+//		Command diffCommand = new Command(false, -1, -1, -1, ExprConstant.TRUE);
+
+		// Execute the command
+		System.out.println("============ Command " + diffCommand + ": ============");
+		A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, sigs, diffCommand, options);
+
+		// Print the outcome
+		System.out.println(ans);
+		// If satisfiable...
+		if (ans.satisfiable()) {
+			// You can query "ans" to find out the values of each set or
+			// type.
+			// This can be useful for debugging.
+			//
+			// You can also write the outcome to an XML file
+			ans.writeXML("alloy_example_output.xml");
+			//
+			// You can then visualize the XML file by calling this:
+			if (viz == null) {
+				viz = new VizGUI(false, "alloy_example_output.xml", null);
+			}
+		}
+
+	}
 	/**
 	 * Merges signatures from v1 and v2 by creating combined Sigs for common
 	 * signatures and copying unique signatures
@@ -310,7 +378,44 @@ public class ModuleMerger {
 	 * @return
 	 */
 	private ExprUnary.Op getMergeOp(ExprUnary.Op op, ExprUnary.Op op2) {
-		return ExprUnary.Op.SETOF;
+		switch (op) {
+		case SETOF:
+			return ExprUnary.Op.SETOF;
+		case SOMEOF:
+			switch (op2) {
+			case SETOF:
+				return ExprUnary.Op.SETOF;
+			case LONEOF:
+				return ExprUnary.Op.SETOF;
+			default:
+				// this covers both the some and the one operator
+				return ExprUnary.Op.SOMEOF;
+			}
+		case LONEOF:
+			switch (op2) {
+			case SETOF:
+				return ExprUnary.Op.SETOF;
+			case SOMEOF:
+				return ExprUnary.Op.SETOF;
+			default:
+				// this covers both the lone and the one operator
+				return ExprUnary.Op.LONEOF;
+			}
+		case ONEOF:
+			switch (op2) {
+			case SETOF:
+				return ExprUnary.Op.SETOF;
+			case SOMEOF:
+				return ExprUnary.Op.SOMEOF;
+			case LONEOF:
+				return ExprUnary.Op.LONEOF;
+			default:
+				// this covers the one operator
+				return ExprUnary.Op.ONEOF;
+			}
+		default:
+			return ExprUnary.Op.SETOF;
+		}
 	}
 
 	private ExprBinary.Op getArrowForOp(ExprUnary.Op op) {
