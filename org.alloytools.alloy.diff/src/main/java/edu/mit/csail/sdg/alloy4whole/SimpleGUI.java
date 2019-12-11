@@ -337,6 +337,9 @@ public final class SimpleGUI implements ComponentListener, Listener {
     /** The preferences dialog. */
     private PreferencesDialog     prefDialog;
 
+    /** The compare files dialog. */
+    private CompareFilesDialog    compareDialog;
+
     // ====== helper methods =================================================//
 
     /**
@@ -691,6 +694,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
             filemenu.add(recentmenu = new JMenu("Open Recent"));
             menuItem(filemenu, "Reload all", 'R', 'R', doReloadAll());
             menuItem(filemenu, "Save", 'S', 'S', doSave());
+            menuItem(filemenu, "Compare", 'M', 'M', doCompare());
             if (Util.onMac())
                 menuItem(filemenu, "Save As...", VK_SHIFT, 'S', doSaveAs());
             else
@@ -786,6 +790,38 @@ public final class SimpleGUI implements ComponentListener, Listener {
             log.clearError();
         }
         return wrapMe();
+    }
+
+    /** This method performs Comparison of two Alloy model specs. */
+    private Runner doCompare() {
+        if (!wrap) {
+            final String binary = alloyHome() + fs + "binary";
+
+            List<OurSyntaxWidget> tabsList = text.getTabs();
+            compareDialog = new CompareFilesDialog(log, binary, tabsList);
+            compareDialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+            try {
+                wrap = true;
+                //                compareDialog.addChangeListener(wrapToChangeListener(doOptRefreshFont()), FontName, FontSize, TabSize);
+                //                compareDialog.addChangeListener(wrapToChangeListener(doOptAntiAlias()), AntiAlias);
+                //                compareDialog.addChangeListener(wrapToChangeListener(doOptSyntaxHighlighting()), SyntaxDisabled);
+                //                compareDialog.addChangeListener(wrapToChangeListener(doLookAndFeel()), LAF);
+            } finally {
+                wrap = false;
+            }
+
+            compareDialog.setVisible(true);
+        }
+        return wrapMe();
+        //
+        //        if (!wrap) {
+        //            //            List<OurSyntaxWidget> tabsList = text.getTabs();
+        //            //            for (OurSyntaxWidget w : tabsList) {
+        //            //                System.out.println(w.getFilename());
+        //            //            }
+        //            compareDialog.setVisible(true);
+        //        }
+        //        return wrapMe();
     }
 
     /** This method performs File->SaveAs. */
@@ -2166,6 +2202,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
             toolbar.add(stopbutton = OurUtil.button("Stop", "Stops the current analysis", "images/24_execute_abort2.gif", doStop(2)));
             stopbutton.setVisible(false);
             toolbar.add(showbutton = OurUtil.button("Show", "Shows the latest instance", "images/24_graph.gif", doShowLatest()));
+            toolbar.add(OurUtil.button("Compare", "Compares Alloy models", "images/24_compare.gif", doCompare()));
             toolbar.add(Box.createHorizontalGlue());
             toolbar.setBorder(new OurBorder(false, false, false, false));
         } finally {
@@ -2181,6 +2218,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
 
         // Create loggers for preference changes
         PreferencesDialog.logOnChange(log, A4Preferences.allUserPrefs().toArray(new Pref< ? >[0]));
+        CompareFilesDialog.logOnChange(log, A4Preferences.allUserPrefs().toArray(new Pref< ? >[0]));
 
         // Create the text area
         text = new OurTabbedSyntaxWidget(fontName, fontSize, TabSize.get());

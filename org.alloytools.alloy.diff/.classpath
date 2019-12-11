@@ -6,7 +6,7 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="src" output="target/classes" path="src/main/java"/>
-	<classpathentry kind="src" path="src/test/java"/>
+	<classpathentry excluding="/" kind="src" path="src/test/java"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/org.alloytools.alloy.application"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/org.alloytools.alloy.core"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/org.alloytools.alloy.java"/>
