@@ -27,6 +27,8 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.plaf.basic.BasicComboBoxRenderer;
 
+import org.alloytools.alloy.diff.ModuleMerger;
+
 import edu.mit.csail.sdg.alloy4.A4Preferences.ChoicePref;
 import edu.mit.csail.sdg.alloy4.A4Preferences.Pref;
 import edu.mit.csail.sdg.alloy4.A4Preferences.StringChoicePref;
@@ -209,18 +211,14 @@ public class CompareFilesDialog extends JFrame {
         setSize(getSize().width + 5, getSize().height + 5);
         setResizable(false);
         setLocationRelativeTo(null);
-        setAlwaysOnTop(true);
+        setAlwaysOnTop(false);
 
         compareButton.addActionListener(new ActionListener() {
 
-            int leftIndex  = tabNamesLeft.getSelectedIndex();
-            int rightIndex = tabNamesRight.getSelectedIndex();
-
-
             @Override
             public void actionPerformed(ActionEvent e) {
-                // TODO Auto-generated method stub
-
+                ModuleMerger m = new ModuleMerger(tabNamesLeft.get(), tabNamesRight.get());
+                //dispose();
             }
         });
     }

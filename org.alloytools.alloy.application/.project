@@ -20,4 +20,11 @@
 		<nature>org.eclipse.jdt.core.javanature</nature>
 		<nature>bndtools.core.bndnature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>org.alloytools.alloy.diff</name>
+			<type>2</type>
+			<location>C:/Users/waqee/Documents/MSc/Final Project/code/trunk/org.alloytools.alloy/org.alloytools.alloy.diff</location>
+		</link>
+	</linkedResources>
 </projectDescription>
