@@ -1,4 +1,4 @@
-module b2
+module b1
 
 sig Object{}
 
@@ -9,7 +9,7 @@ sig Bank{
 }
 
 pred xxx {
-	no Object
+	all b : Bank | #b.branches > 0
 }
 
 fact {Branch + Bank = Object}

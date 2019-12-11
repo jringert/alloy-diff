@@ -19,4 +19,4 @@ pred b {
   #Bank = 0
 }
 
-run {(#Branch = 0) or #Bank = 0} for 7
+run {a[Branch] or b} for 7
