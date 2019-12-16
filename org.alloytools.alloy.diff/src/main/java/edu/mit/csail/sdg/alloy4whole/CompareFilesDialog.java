@@ -1,7 +1,6 @@
 package edu.mit.csail.sdg.alloy4whole;
 
 import java.awt.Component;
-import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
@@ -12,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 
 import javax.swing.AbstractListModel;
-import javax.swing.BoundedRangeModel;
 import javax.swing.ComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -26,48 +24,15 @@ import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.plaf.basic.BasicComboBoxRenderer;
-import javax.swing.text.StyledEditorKit.FontSizeAction;
 
 import org.alloytools.alloy.diff.ModuleMerger;
 
 import edu.mit.csail.sdg.alloy4.A4Preferences.ChoicePref;
 import edu.mit.csail.sdg.alloy4.A4Preferences.Pref;
 import edu.mit.csail.sdg.alloy4.A4Preferences.StringChoicePref;
-import edu.mit.csail.sdg.alloy4.OurDialog;
 import edu.mit.csail.sdg.alloy4.OurSyntaxWidget;
-import edu.mit.csail.sdg.alloy4.OurTabbedSyntaxWidget;
 import edu.mit.csail.sdg.alloy4.OurUtil;
 import edu.mit.csail.sdg.alloy4.OurUtil.GridBagConstraintsBuilder;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.AnalyzerHeight;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.AnalyzerWidth;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.AnalyzerX;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.AnalyzerY;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.AntiAlias;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.AutoVisualize;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.CoreGranularity;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.CoreMinimization;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.FontName;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.FontSize;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.ImplicitThis;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.InferPartialInstance;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.LAF;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.Model0;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.Model1;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.Model2;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.Model3;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.NoOverflow;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.RecordKodkod;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.SkolemDepth;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.Solver;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.SubMemory;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.SubStack;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.SyntaxDisabled;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.TabSize;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.Unrolls;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.VerbosityPref;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.WarningNonfatal;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.Welcome;
-
 
 @SuppressWarnings({ "serial" })
 public class CompareFilesDialog extends JFrame {
@@ -123,7 +88,7 @@ public class CompareFilesDialog extends JFrame {
 	private final Map<Pref<?>, JComponent> pref2comp = new HashMap<Pref<?>, JComponent>();
 	private final String binary;
 	private final String currentViewFile;
-	private final SwingLogPanel log;
+	private static SwingLogPanel log = null;
 
 	private List<OurSyntaxWidget> tabsList;
 
@@ -141,11 +106,15 @@ public class CompareFilesDialog extends JFrame {
 
 		JLabel dialogLabel = new JLabel();
 		dialogLabel.setText("Find instances of Right file that are not instances of Left file");
-		//dialogLabel.setFont(new Font("Courier", Font.BOLD,12));
-		
+		// dialogLabel.setFont(new Font("Courier", Font.BOLD,12));
+
 		ArrayList<String> tabListNames = new ArrayList<String>();
+		int currentIndex = 0;
+		HashMap<Integer, String> fileMap = new HashMap<Integer, String>();
 		for (OurSyntaxWidget tab : tabsList) {
-			//tabListNames.add(tab.getFilename());
+			// tabListNames.add(tab.getFilename());
+			fileMap.put(currentIndex, tab.getFilename());
+			currentIndex++;
 			tabListNames.add(tab.getFilename().substring(tab.getFilename().lastIndexOf('\\') + 1));
 		}
 
@@ -157,17 +126,17 @@ public class CompareFilesDialog extends JFrame {
 		tabNamesLeft.set(currentViewFile);
 		tabNamesRight.setSelectedIndex(0);
 
-		JPanel p = OurUtil.makeGrid(2, gbc().make(), mkCombo(tabNamesLeft),
-				mkCombo(tabNamesRight), mkButton(compareButton));
+		JPanel p = OurUtil.makeGrid(2, gbc().make(), mkCombo(tabNamesLeft), mkCombo(tabNamesRight),
+				mkButton(compareButton));
 
 		new JEditorPane();
 
 		add(p);
-		//add(dialogLabel);
+		// add(dialogLabel);
 		// add(mkCombo(tabNamesRight));
 
 		setTitle("Compare Alloy Models");
-		
+
 		pack();
 		setSize(getSize().width + 5, getSize().height + 5);
 		setResizable(false);
@@ -175,15 +144,30 @@ public class CompareFilesDialog extends JFrame {
 		setAlwaysOnTop(false);
 
 		compareButton.addActionListener(new ActionListener() {
-
+		
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				ModuleMerger m = new ModuleMerger(tabNamesLeft.get(), tabNamesRight.get());
+				//log.log("Comparing:\n" + tabNamesRight.get()
+				log.clearError();
+	            log.logDivider();
+
+				log.logBold("Comparing: " + tabNamesRight.get()
+						+ " with " + tabNamesLeft.get() + "\n");
+
+				ModuleMerger m = new ModuleMerger(fileMap.get(tabNamesLeft.getSelectedIndex()),
+						fileMap.get(tabNamesRight.getSelectedIndex()));
+	            log.logDivider();
+	            log.flush();
 				// dispose();
 			}
 		});
 	}
 
+	public static void writeLog(String logMsg) {
+		log.log(logMsg);
+
+	}
+	
 	@SuppressWarnings({ "unchecked" })
 	protected <T> JPanel mkCombo(final ChoicePref<T> pref) {
 		JComboBox cb = make(new JComboBox(mkComboBoxModelFor(pref)));
@@ -201,11 +185,11 @@ public class CompareFilesDialog extends JFrame {
 	protected <T> JPanel mkButton(JButton jb) {
 		return OurUtil.makeH(null, jb, null);
 	}
-	
+
 	protected <T> JPanel mkLabel(JLabel l) {
 		return OurUtil.makeH(null, l, null);
 	}
-	
+
 	private <T> ComboBoxModel mkComboBoxModelFor(ChoicePref<T> pref) {
 		return new CBModel<T>(pref);
 	}

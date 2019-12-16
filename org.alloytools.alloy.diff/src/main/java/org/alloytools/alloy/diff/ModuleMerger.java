@@ -22,6 +22,7 @@ import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.alloy4.ErrorWarning;
 import edu.mit.csail.sdg.alloy4.SafeList;
 import edu.mit.csail.sdg.alloy4viz.VizGUI;
+import edu.mit.csail.sdg.alloy4whole.CompareFilesDialog;
 import edu.mit.csail.sdg.ast.Attr;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Decl;
@@ -99,7 +100,7 @@ public class ModuleMerger {
 
 		// Print the outcome
 		System.out.println(ans);
-
+		CompareFilesDialog.writeLog(ans + "\n");
 		// 1. Create the frame.
 		JFrame frame = new JFrame("Compare Outcome");
 
@@ -139,7 +140,7 @@ public class ModuleMerger {
 		// 4. Size the frame.
 		frame.pack();
 		// 5. Show it.
-		frame.setVisible(true);
+		//frame.setVisible(true);
 
 		showViz(viz, ans);
 
