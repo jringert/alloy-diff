@@ -1,10 +1,5 @@
 package org.alloytools.alloy.diff;
 
-import java.awt.BorderLayout;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -13,16 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JTextArea;
-
-import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.ConstList;
-import edu.mit.csail.sdg.alloy4.ErrorWarning;
 import edu.mit.csail.sdg.alloy4.SafeList;
-import edu.mit.csail.sdg.alloy4viz.VizGUI;
-import edu.mit.csail.sdg.alloy4whole.CompareFilesDialog;
 import edu.mit.csail.sdg.ast.Attr;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Decl;
@@ -43,131 +30,17 @@ import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.ast.Sig.PrimSig;
 import edu.mit.csail.sdg.ast.Type;
 import edu.mit.csail.sdg.ast.Type.ProductType;
-import edu.mit.csail.sdg.parser.CompUtil;
-import edu.mit.csail.sdg.translator.A4Options;
 import edu.mit.csail.sdg.translator.A4Solution;
-import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 
 public class ModuleMerger {
 
-	protected Map<String, Sig> sigs;
-	protected Expr c1 = ExprConstant.TRUE;
-	protected Expr c2 = ExprConstant.TRUE;
+	protected static Map<String, Sig> sigs;
+	protected static Expr c1 = ExprConstant.TRUE;
+	protected static Expr c2 = ExprConstant.TRUE;
 	protected A4Solution ans;
 
-	public ModuleMerger() {
-
-	}
-
-	public ModuleMerger(String leftFile, String rightFile) {
-		VizGUI viz = null;
-
-		A4Reporter rep = new A4Reporter() {
-
-			@Override
-			public void warning(ErrorWarning msg) {
-				System.out.print("Relevance Warning:\n" + (msg.toString().trim()) + "\n\n");
-				System.out.flush();
-			}
-		};
-		Module v1, v2;
-		// Module v1 = CompUtil.parseEverything_fromFile(rep, null,
-		// "misc/multiplicities/oneBank.als");
-		// Module v2 = CompUtil.parseEverything_fromFile(rep, null,
-		// "misc/multiplicities/Bank.als");
-//        try {
-		v1 = CompUtil.parseEverything_fromFile(rep, null, leftFile);
-		v2 = CompUtil.parseEverything_fromFile(rep, null, rightFile);
-
-		// Choose some default options for how you want to execute the
-		// commands
-		A4Options options = new A4Options();
-
-		options.solver = A4Options.SatSolver.SAT4J;
-
-		Collection<Sig> sigs = mergeSigs(v1, v2);
-		mergeCommands(v1.getAllCommands().get(0), v2.getAllCommands().get(0));
-
-		System.out.println(c1);
-		System.out.println(c2);
-		Command diffCommand = new Command(false, -1, -1, -1, c2.and(c1.not()));
-
-		// Command diffCommand = new Command(false, -1, -1, -1, ExprConstant.TRUE);
-
-		// Execute the command
-		System.out.println("============ Command " + diffCommand + ": ============");
-		ans = TranslateAlloyToKodkod.execute_command(rep, sigs, diffCommand, options);
-
-		// Print the outcome
-		System.out.println(ans);
-		CompareFilesDialog.writeLog(ans + "\n");
-		// 1. Create the frame.
-		JFrame frame = new JFrame("Compare Outcome");
-
-		// 2. Optional: What happens when the frame closes?
-		// frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-		// 3. Create components and put them in the frame.
-		// ...create emptyLabel...
-		frame.getContentPane().setLayout(new FlowLayout());
-		JTextArea text = new JTextArea(5, 120);
-		text.setText(ans.toString());
-		text.setEditable(false);
-		text.setFont(new Font("Serif", Font.PLAIN, 16));
-		text.setLineWrap(true);
-		text.setWrapStyleWord(true);
-
-		frame.add(text, BorderLayout.CENTER);
-
-		// button for next viz
-		JButton nextBtn = new JButton("Next Viz");
-
-		nextBtn.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				// TODO Auto-generated method stub
-				A4Solution ansNew = ans.next();
-				ans = ansNew;
-				System.out.println(ansNew);
-				showViz(viz, ansNew);
-				text.setText(ansNew.toString());
-			}
-		});
-
-		frame.add(nextBtn);
-
-		// 4. Size the frame.
-		frame.pack();
-		// 5. Show it.
-		//frame.setVisible(true);
-
-		showViz(viz, ans);
-
-//        } catch (Exception e) {
-//            // TODO: handle exception
-//            String message = e.getMessage();
-//            JOptionPane.showMessageDialog(new JFrame(), message, "Dialog", JOptionPane.ERROR_MESSAGE);
-//        }
-	}
-
-	private void showViz(VizGUI viz, A4Solution ans) {
-		// If satisfiable...
-		if (ans.satisfiable()) {
-			// You can query "ans" to find out the values of each set or
-			// type.
-			// This can be useful for debugging.
-			//
-			// You can also write the outcome to an XML file
-			ans.writeXML("alloy_example_output.xml");
-			//
-			// You can then visualize the XML file by calling this:
-			if (viz == null) {
-				viz = new VizGUI(false, "alloy_example_output.xml", null);
-			}
-		}
-	}
-
+	
+	
 	/**
 	 * Merges signatures from v1 and v2 by creating combined Sigs for common
 	 * signatures and copying unique signatures
@@ -176,7 +49,7 @@ public class ModuleMerger {
 	 * @param v2
 	 * @return
 	 */
-	public Collection<Sig> mergeSigs(Module v1, Module v2) {
+	public static Collection<Sig> mergeSigs(Module v1, Module v2) {
 		sigs = new HashMap<>();
 		Map<String, Sig> v1Sigs = new HashMap<>();
 		Map<String, Sig> v2Sigs = new HashMap<>();
@@ -229,13 +102,13 @@ public class ModuleMerger {
 		return sigs.values();
 	}
 
-	private void addFields(Sig s, SafeList<Field> fields) {
+	private static void addFields(Sig s, SafeList<Field> fields) {
 		for (Field f : fields) {
 			s.addField(f.label, replaceSigRefs(f.decl().expr));
 		}
 	}
 
-	private List<ExprHasName> replaceSigRefs(ConstList<? extends ExprHasName> es) {
+	private static List<ExprHasName> replaceSigRefs(ConstList<? extends ExprHasName> es) {
 		List<ExprHasName> l = new ArrayList<>();
 		for (Expr e : es) {
 			l.add((ExprHasName) replaceSigRefs(e));
@@ -250,7 +123,7 @@ public class ModuleMerger {
 	 * @param expr
 	 * @return
 	 */
-	private Expr replaceSigRefs(Expr expr) {
+	private static Expr replaceSigRefs(Expr expr) {
 		return replaceSigRefs(expr, new ArrayList<>());
 	}
 
@@ -262,7 +135,7 @@ public class ModuleMerger {
 	 * @param names list of local names to use for ExprVar
 	 * @return
 	 */
-	private Expr replaceSigRefs(Expr expr, List<Decl> names) {
+	private static Expr replaceSigRefs(Expr expr, List<Decl> names) {
 		switch (expr.getClass().getSimpleName()) {
 		case "ExprUnary":
 			ExprUnary ue = (ExprUnary) expr;
@@ -327,7 +200,7 @@ public class ModuleMerger {
 		}
 	}
 
-	private Func replaceSigRefs(Func fun) {
+	private static Func replaceSigRefs(Func fun) {
 		List<Decl> decls = new ArrayList<Decl>();
 		for (Decl d : fun.decls) {
 			decls.add(new Decl(d.isPrivate, d.disjoint, d.disjoint2, replaceSigRefs(d.names),
@@ -338,7 +211,7 @@ public class ModuleMerger {
 		return fun2;
 	}
 
-	private Type replaceSigRefs(Type t) {
+	private static Type replaceSigRefs(Type t) {
 		for (ProductType pt : t) {
 			if (pt.arity() != 1) {
 				throw new RuntimeException("Ecountered type with arity != 1");
@@ -358,7 +231,7 @@ public class ModuleMerger {
 		throw new RuntimeException("Unhandled case at end of replaceSigRefs(Type t)");
 	}
 
-	private Sig getInternalSig(String label) {
+	private static Sig getInternalSig(String label) {
 		switch (label) {
 		case "univ":
 			sigs.put(label, Sig.UNIV);
@@ -381,7 +254,7 @@ public class ModuleMerger {
 
 	}
 
-	private Expr getField(Sig sig, String label) {
+	private static Expr getField(Sig sig, String label) {
 		for (Field f : sig.getFields()) {
 			if (f.label.equals(label)) {
 				return f;
@@ -397,7 +270,7 @@ public class ModuleMerger {
 	 * @param s2
 	 * @return
 	 */
-	private Sig mergeSig(Sig s1, Sig s2) {
+	private static Sig mergeSig(Sig s1, Sig s2) {
 		Sig s = new PrimSig(s1.label, getCommonSigAttributes(s1, s2));
 		c1 = generateSigAttributeConstraints(s, s1, c1);
 		c2 = generateSigAttributeConstraints(s, s2, c2);
@@ -417,7 +290,7 @@ public class ModuleMerger {
 	 * @param fields1
 	 * @param fields2
 	 */
-	private void mergeFields(Sig mergedSig, SafeList<Field> fields1, SafeList<Field> fields2) {
+	private static void mergeFields(Sig mergedSig, SafeList<Field> fields1, SafeList<Field> fields2) {
 		Set<Field> unique1 = new HashSet<Sig.Field>();
 		Set<Field> unique2 = new HashSet<Sig.Field>();
 
@@ -483,7 +356,7 @@ public class ModuleMerger {
 	 * @param expr
 	 * @return
 	 */
-	private Expr replaceArrows(Expr expr) {
+	private static Expr replaceArrows(Expr expr) {
 		switch (expr.getClass().getSimpleName()) {
 		case "ExprUnary":
 			ExprUnary ue = (ExprUnary) expr;
@@ -521,7 +394,7 @@ public class ModuleMerger {
 	 * @param op2
 	 * @return
 	 */
-	private ExprUnary.Op getMergeOp(ExprUnary.Op op, ExprUnary.Op op2) {
+	private static ExprUnary.Op getMergeOp(ExprUnary.Op op, ExprUnary.Op op2) {
 		switch (op) {
 		case SETOF:
 			return ExprUnary.Op.SETOF;
@@ -562,7 +435,7 @@ public class ModuleMerger {
 		}
 	}
 
-	private ExprBinary.Op getArrowForOp(ExprUnary.Op op) {
+	private static ExprBinary.Op getArrowForOp(ExprUnary.Op op) {
 		switch (op) {
 		case ONEOF:
 			return ExprBinary.Op.ANY_ARROW_ONE;
@@ -575,7 +448,7 @@ public class ModuleMerger {
 		}
 	}
 
-	private void addUniqueField(Sig mergedSig, Field field, boolean inC1) {
+	private static void addUniqueField(Sig mergedSig, Field field, boolean inC1) {
 		Field f;
 		Expr e = replaceSigRefs(field.decl().expr);
 		if (e instanceof ExprUnary) {
@@ -614,7 +487,7 @@ public class ModuleMerger {
 	 * @param c
 	 * @return
 	 */
-	private Expr generateSigAttributeConstraints(Sig s, Sig old, Expr c) {
+	private static Expr generateSigAttributeConstraints(Sig s, Sig old, Expr c) {
 		if (old.isAbstract != null && s.isAbstract == null) {
 			c = c.and(s.no());
 		}
@@ -641,7 +514,7 @@ public class ModuleMerger {
 	 * @param s2
 	 * @return
 	 */
-	private Attr[] getCommonSigAttributes(Sig s1, Sig s2) {
+	private static Attr[] getCommonSigAttributes(Sig s1, Sig s2) {
 		List<Attr> attrs = new ArrayList<>();
 		for (Attr a1 : s1.attributes) {
 			for (Attr a2 : s2.attributes) {
@@ -653,8 +526,14 @@ public class ModuleMerger {
 		return attrs.toArray(new Attr[] {});
 	}
 
-	public void mergeCommands(Command cmd1, Command cmd2) {
+	public static void mergeCommands(Command cmd1, Command cmd2) {
 		c1 = c1.and(replaceSigRefs(cmd1.formula));
 		c2 = c2.and(replaceSigRefs(cmd2.formula));
+	}
+
+	public static Command generateCommand(Module v1, Module v2) {
+		ModuleMerger.mergeCommands(v1.getAllCommands().get(0), v2.getAllCommands().get(0));
+
+		return new Command(false, -1, -1, -1, c2.and(c1.not()));
 	}
 }

@@ -123,7 +123,7 @@ public class CompareFilesDialog extends JFrame {
 
 		JButton compareButton = new JButton("Compare");
 
-		tabNamesLeft.set(currentViewFile);
+		tabNamesLeft.set(currentViewFile.substring(currentViewFile.lastIndexOf('\\') + 1));
 		tabNamesRight.setSelectedIndex(0);
 
 		JPanel p = OurUtil.makeGrid(2, gbc().make(), mkCombo(tabNamesLeft), mkCombo(tabNamesRight),
@@ -144,30 +144,16 @@ public class CompareFilesDialog extends JFrame {
 		setAlwaysOnTop(false);
 
 		compareButton.addActionListener(new ActionListener() {
-		
+
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				//log.log("Comparing:\n" + tabNamesRight.get()
-				log.clearError();
-	            log.logDivider();
 
-				log.logBold("Comparing: " + tabNamesRight.get()
-						+ " with " + tabNamesLeft.get() + "\n");
-
-				ModuleMerger m = new ModuleMerger(fileMap.get(tabNamesLeft.getSelectedIndex()),
-						fileMap.get(tabNamesRight.getSelectedIndex()));
-	            log.logDivider();
-	            log.flush();
-				// dispose();
+				Compare.CompareModules(fileMap.get(tabNamesLeft.getSelectedIndex()),
+						fileMap.get(tabNamesRight.getSelectedIndex()), log);
 			}
 		});
 	}
 
-	public static void writeLog(String logMsg) {
-		log.log(logMsg);
-
-	}
-	
 	@SuppressWarnings({ "unchecked" })
 	protected <T> JPanel mkCombo(final ChoicePref<T> pref) {
 		JComboBox cb = make(new JComboBox(mkComboBoxModelFor(pref)));
@@ -219,7 +205,6 @@ public class CompareFilesDialog extends JFrame {
 			return;
 		for (final Pref<?> pref : prefs) {
 			pref.addChangeListener(new ChangeListener() {
-
 				@Override
 				public void stateChanged(ChangeEvent e) {
 					logPrefChanged(log, pref);
@@ -230,7 +215,6 @@ public class CompareFilesDialog extends JFrame {
 
 	public static void main(String[] args) {
 		SwingUtilities.invokeLater(new Runnable() {
-
 			@Override
 			public void run() {
 				CompareFilesDialog sd = new CompareFilesDialog(null, null, null, null);

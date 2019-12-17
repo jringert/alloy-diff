@@ -868,9 +868,9 @@ public final class SimpleGUI implements ComponentListener, Listener {
 					tabsList.add(tab);
 				}
 			}
-	
+
 			String currentFileView = text.get().getFilename();
-			
+
 			if (tabsList.size() < 2) {
 				log.logRed("Please open at least two files in the Alloy Analyzer. \nMake sure you've saved the files!");
 			} else {
@@ -1850,6 +1850,8 @@ public final class SimpleGUI implements ComponentListener, Listener {
 		}
 		if (arg.startsWith("XML: ")) { // XML: filename
 			viz.loadXML(Util.canon(arg.substring(5)), false);
+		} else {
+			viz.loadXML(Util.canon(arg), false);
 		}
 		return null;
 	}
