@@ -19,61 +19,10 @@
    <types> <type ID="4"/> <type ID="4"/> </types>
 </field>
 
-<sig label="this/File" ID="7" parentID="2">
-   <atom label="File$0"/>
-   <atom label="File$1"/>
+<sig label="this/Object" ID="7" parentID="2">
 </sig>
-
-<sig label="this/Dir" ID="8" parentID="2">
-   <atom label="Dir$0"/>
-</sig>
-
-<sig label="this/FileSystem" ID="9" parentID="2">
-   <atom label="FileSystem$0"/>
-   <atom label="FileSystem$1"/>
-   <atom label="FileSystem$2"/>
-</sig>
-
-<field label="root" ID="10" parentID="9">
-   <tuple> <atom label="FileSystem$0"/> <atom label="Dir$0"/> </tuple>
-   <tuple> <atom label="FileSystem$1"/> <atom label="Dir$0"/> </tuple>
-   <tuple> <atom label="FileSystem$2"/> <atom label="Dir$0"/> </tuple>
-   <types> <type ID="9"/> <type ID="8"/> </types>
-</field>
-
-<field label="live" ID="11" parentID="9">
-   <tuple> <atom label="FileSystem$0"/> <atom label="FSObject$2"/> </tuple>
-   <tuple> <atom label="FileSystem$1"/> <atom label="FSObject$1"/> </tuple>
-   <tuple> <atom label="FileSystem$2"/> <atom label="FSObject$0"/> </tuple>
-   <tuple> <atom label="FileSystem$2"/> <atom label="FSObject$2"/> </tuple>
-   <types> <type ID="9"/> <type ID="12"/> </types>
-</field>
-
-<field label="contents" ID="13" parentID="9">
-   <tuple> <atom label="FileSystem$1"/> <atom label="Dir$0"/> <atom label="FSObject$0"/> </tuple>
-   <tuple> <atom label="FileSystem$1"/> <atom label="Dir$0"/> <atom label="FSObject$1"/> </tuple>
-   <tuple> <atom label="FileSystem$1"/> <atom label="Dir$0"/> <atom label="FSObject$2"/> </tuple>
-   <tuple> <atom label="FileSystem$2"/> <atom label="Dir$0"/> <atom label="FSObject$0"/> </tuple>
-   <tuple> <atom label="FileSystem$2"/> <atom label="Dir$0"/> <atom label="FSObject$1"/> </tuple>
-   <types> <type ID="9"/> <type ID="8"/> <type ID="12"/> </types>
-</field>
-
-<field label="parent" ID="14" parentID="9">
-   <tuple> <atom label="FileSystem$0"/> <atom label="FSObject$1"/> <atom label="File$1"/> </tuple>
-   <tuple> <atom label="FileSystem$1"/> <atom label="FSObject$0"/> <atom label="File$1"/> </tuple>
-   <tuple> <atom label="FileSystem$1"/> <atom label="FSObject$1"/> <atom label="File$0"/> </tuple>
-   <tuple> <atom label="FileSystem$2"/> <atom label="FSObject$0"/> <atom label="File$1"/> </tuple>
-   <tuple> <atom label="FileSystem$2"/> <atom label="FSObject$1"/> <atom label="File$1"/> </tuple>
-   <types> <type ID="9"/> <type ID="12"/> <type ID="7"/> </types>
-</field>
 
 <sig label="this/Branch" ID="6" parentID="2">
-</sig>
-
-<sig label="this/FSObject" ID="12" parentID="2" abstract="yes">
-   <atom label="FSObject$0"/>
-   <atom label="FSObject$1"/>
-   <atom label="FSObject$2"/>
 </sig>
 
 <sig label="univ" ID="2" builtin="yes">

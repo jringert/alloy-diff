@@ -30,16 +30,13 @@ import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.ast.Sig.PrimSig;
 import edu.mit.csail.sdg.ast.Type;
 import edu.mit.csail.sdg.ast.Type.ProductType;
-import edu.mit.csail.sdg.translator.A4Solution;
 
 public class ModuleMerger {
 
 	protected static Map<String, Sig> sigs;
-	protected static Expr c1 = ExprConstant.TRUE;
-	protected static Expr c2 = ExprConstant.TRUE;
-	protected A4Solution ans;
+	protected static Expr c1;
+	protected static Expr c2;
 
-	
 	
 	/**
 	 * Merges signatures from v1 and v2 by creating combined Sigs for common
@@ -53,6 +50,8 @@ public class ModuleMerger {
 		sigs = new HashMap<>();
 		Map<String, Sig> v1Sigs = new HashMap<>();
 		Map<String, Sig> v2Sigs = new HashMap<>();
+		c1 = ExprConstant.TRUE;
+		c2 = ExprConstant.TRUE;
 
 		// fill look-up tables
 		for (Sig s : v1.getAllSigs()) {

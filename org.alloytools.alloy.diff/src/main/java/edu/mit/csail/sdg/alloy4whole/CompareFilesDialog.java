@@ -139,10 +139,11 @@ public class CompareFilesDialog extends JFrame {
 
 		pack();
 		setSize(getSize().width + 5, getSize().height + 5);
-		setResizable(false);
+		setResizable(true);
 		setLocationRelativeTo(null);
 		setAlwaysOnTop(false);
-
+		
+		CompareFilesDialog dialog = this;
 		compareButton.addActionListener(new ActionListener() {
 
 			@Override
@@ -150,6 +151,7 @@ public class CompareFilesDialog extends JFrame {
 
 				Compare.CompareModules(fileMap.get(tabNamesLeft.getSelectedIndex()),
 						fileMap.get(tabNamesRight.getSelectedIndex()), log);
+				dialog.dispose();
 			}
 		});
 	}

@@ -1,29 +1,14 @@
 package edu.mit.csail.sdg.alloy4whole;
 
-import java.awt.BorderLayout;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.Collection;
 
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JTextArea;
-import javax.swing.JTextPane;
-import javax.swing.text.Style;
-import javax.swing.text.StyleConstants;
-import javax.swing.text.StyledDocument;
-
+import javax.swing.JMenu;
 import org.alloytools.alloy.diff.ModuleMerger;
 
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.ErrorWarning;
-import edu.mit.csail.sdg.alloy4.OurAntiAlias;
-import edu.mit.csail.sdg.alloy4.OurUtil;
 import edu.mit.csail.sdg.alloy4viz.VizGUI;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Module;
@@ -35,6 +20,10 @@ import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 
 public class Compare {
 
+	private static final String ALLOY_EXAMPLE_OUTPUT_XML = "alloy_example_output.xml";
+	public static A4Solution ans;
+	public static VizGUI viz;
+
 	public static void CompareModules(String leftFile, String rightFile, SwingLogPanel log) {
 		if (log != null) {
 			log.clearError();
@@ -44,8 +33,6 @@ public class Compare {
 					+ rightFile.substring(rightFile.lastIndexOf('\\') + 1));
 
 		}
-		// TODO Auto-generated method stub
-		VizGUI viz = null;
 
 		A4Reporter rep = new A4Reporter() {
 			@Override
@@ -70,14 +57,12 @@ public class Compare {
 
 		Command diffCommand = ModuleMerger.generateCommand(v1, v2);
 
-		// Execute the command
-		System.out.println("============ Command " + diffCommand + ": ============");
-		A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, sigs, diffCommand, options);
+		ans = TranslateAlloyToKodkod.execute_command(rep, sigs, diffCommand, options);
 
 		if (ans.satisfiable()) {
 			ans.writeXML("alloy_compare_output.xml");
 			if (log != null) {
-				log.logLink("\nInstance Found", "alloy_compare_output.xml");
+				log.log("\nInstance Found. Visualizer opened.\n");
 			} else {
 				System.out.println(ans);
 			}
@@ -88,14 +73,11 @@ public class Compare {
 				System.out.println(ans);
 			}
 		}
-		log.logDivider();
 		log.flush();
-		// showViz(viz, ans);
+		showViz(log);
 	}
 
-	private static void showViz(A4Solution ans) {
-		VizGUI viz = null;
-
+	private static void showViz(SwingLogPanel log) {
 		// If satisfiable...
 		if (ans.satisfiable()) {
 			// You can query "ans" to find out the values of each set or
@@ -103,12 +85,53 @@ public class Compare {
 			// This can be useful for debugging.
 			//
 			// You can also write the outcome to an XML file
-			ans.writeXML("alloy_example_output.xml");
+			ans.writeXML(ALLOY_EXAMPLE_OUTPUT_XML);
 			//
+
+			JMenu m = new JMenu("Next");
+
+			m.addMouseListener(new MouseListener() {
+
+				@Override
+				public void mouseReleased(MouseEvent e) {
+					// TODO Auto-generated method stub
+
+				}
+
+				@Override
+				public void mousePressed(MouseEvent e) {
+					Compare.ans = Compare.ans.next();
+					if (ans.satisfiable()) {
+						ans.writeXML(ALLOY_EXAMPLE_OUTPUT_XML);
+						viz.loadXML(ALLOY_EXAMPLE_OUTPUT_XML, true);
+						log.log("Next solution displayed.\r\n");
+					} else {
+						log.log("No more solutions.\r\n");
+					}
+					log.flush();
+				}
+
+				@Override
+				public void mouseClicked(MouseEvent arg0) {
+					// TODO Auto-generated method stub
+
+				}
+
+				@Override
+				public void mouseEntered(MouseEvent arg0) {
+					// TODO Auto-generated method stub
+
+				}
+
+				@Override
+				public void mouseExited(MouseEvent arg0) {
+					// TODO Auto-generated method stub
+
+				}
+			});
+
 			// You can then visualize the XML file by calling this:
-			if (viz == null) {
-				viz = new VizGUI(false, "alloy_example_output.xml", null);
-			}
+			viz = new VizGUI(false, ALLOY_EXAMPLE_OUTPUT_XML, m);
 		}
 	}
 
