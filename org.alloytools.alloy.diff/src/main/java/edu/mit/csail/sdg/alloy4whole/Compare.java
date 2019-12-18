@@ -2,21 +2,13 @@ package edu.mit.csail.sdg.alloy4whole;
 
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
-import java.util.Collection;
 
 import javax.swing.JMenu;
-import org.alloytools.alloy.diff.ModuleMerger;
 
-import edu.mit.csail.sdg.alloy4.A4Reporter;
-import edu.mit.csail.sdg.alloy4.ErrorWarning;
+import org.alloytools.alloy.diff.ModuleDiff;
+
 import edu.mit.csail.sdg.alloy4viz.VizGUI;
-import edu.mit.csail.sdg.ast.Command;
-import edu.mit.csail.sdg.ast.Module;
-import edu.mit.csail.sdg.ast.Sig;
-import edu.mit.csail.sdg.parser.CompUtil;
-import edu.mit.csail.sdg.translator.A4Options;
 import edu.mit.csail.sdg.translator.A4Solution;
-import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 
 public class Compare {
 
@@ -33,31 +25,8 @@ public class Compare {
 					+ rightFile.substring(rightFile.lastIndexOf('\\') + 1));
 
 		}
-
-		A4Reporter rep = new A4Reporter() {
-			@Override
-			public void warning(ErrorWarning msg) {
-				System.out.print("Relevance Warning:\n" + (msg.toString().trim()) + "\n\n");
-				System.out.flush();
-			}
-		};
-
-		Module v1, v2;
-
-		v1 = CompUtil.parseEverything_fromFile(rep, null, leftFile);
-		v2 = CompUtil.parseEverything_fromFile(rep, null, rightFile);
-
-		// Choose some default options for how you want to execute the
-		// commands
-		A4Options options = new A4Options();
-
-		options.solver = A4Options.SatSolver.SAT4J;
-
-		Collection<Sig> sigs = ModuleMerger.mergeSigs(v1, v2);
-
-		Command diffCommand = ModuleMerger.generateCommand(v1, v2);
-
-		ans = TranslateAlloyToKodkod.execute_command(rep, sigs, diffCommand, options);
+		
+		ans = ModuleDiff.diff(leftFile, rightFile);
 
 		if (ans.satisfiable()) {
 			ans.writeXML("alloy_compare_output.xml");

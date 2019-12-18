@@ -23,6 +23,7 @@
 </sig>
 
 <sig label="this/Branch" ID="6" parentID="2">
+   <atom label="Branch$0"/>
 </sig>
 
 <sig label="univ" ID="2" builtin="yes">
