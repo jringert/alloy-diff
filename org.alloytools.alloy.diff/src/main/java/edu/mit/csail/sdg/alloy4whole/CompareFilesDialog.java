@@ -1,20 +1,32 @@
 package edu.mit.csail.sdg.alloy4whole;
 
+import static edu.mit.csail.sdg.alloy4.A4Preferences.FontName;
+import static edu.mit.csail.sdg.alloy4.A4Preferences.FontSize;
+import static edu.mit.csail.sdg.alloy4.A4Preferences.TabSize;
+
 import java.awt.Component;
+import java.awt.Container;
+import java.awt.Font;
+import java.awt.GraphicsEnvironment;
 import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import javax.swing.AbstractListModel;
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
 import javax.swing.ComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
+import javax.swing.JDialog;
 import javax.swing.JEditorPane;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -30,12 +42,13 @@ import org.alloytools.alloy.diff.ModuleMerger;
 import edu.mit.csail.sdg.alloy4.A4Preferences.ChoicePref;
 import edu.mit.csail.sdg.alloy4.A4Preferences.Pref;
 import edu.mit.csail.sdg.alloy4.A4Preferences.StringChoicePref;
+import edu.mit.csail.sdg.alloy4.OurDialog;
 import edu.mit.csail.sdg.alloy4.OurSyntaxWidget;
 import edu.mit.csail.sdg.alloy4.OurUtil;
 import edu.mit.csail.sdg.alloy4.OurUtil.GridBagConstraintsBuilder;
 
 @SuppressWarnings({ "serial" })
-public class CompareFilesDialog extends JFrame {
+public class CompareFilesDialog extends JDialog {
 
 	@SuppressWarnings("unchecked")
 	private static class CBModel<T> extends AbstractListModel implements ComboBoxModel {
@@ -97,22 +110,24 @@ public class CompareFilesDialog extends JFrame {
 		this.binary = binary;
 		this.tabsList = list;
 		this.currentViewFile = currentViewFile;
+		// this.setResizable(false);
 		if (log != null && binary != null) {
 		}
 		initUI();
 	}
 
 	protected final void initUI() {
-
+		// setResizable(false);
 		JLabel dialogLabel = new JLabel();
 		dialogLabel.setText("Find instances of Right file that are not instances of Left file");
-		// dialogLabel.setFont(new Font("Courier", Font.BOLD,12));
+
+		dialogLabel.setFont(new Font(FontName.get(), Font.PLAIN, FontSize.get()));
+		;
 
 		ArrayList<String> tabListNames = new ArrayList<String>();
 		int currentIndex = 0;
 		HashMap<Integer, String> fileMap = new HashMap<Integer, String>();
 		for (OurSyntaxWidget tab : tabsList) {
-			// tabListNames.add(tab.getFilename());
 			fileMap.put(currentIndex, tab.getFilename());
 			currentIndex++;
 			tabListNames.add(tab.getFilename().substring(tab.getFilename().lastIndexOf('\\') + 1));
@@ -126,14 +141,7 @@ public class CompareFilesDialog extends JFrame {
 		tabNamesLeft.set(currentViewFile.substring(currentViewFile.lastIndexOf('\\') + 1));
 		tabNamesRight.setSelectedIndex(0);
 
-		JPanel p = OurUtil.makeGrid(2, gbc().make(), mkCombo(tabNamesLeft), mkCombo(tabNamesRight),
-				mkButton(compareButton));
-
-		new JEditorPane();
-
-		add(p);
-		// add(dialogLabel);
-		// add(mkCombo(tabNamesRight));
+		add(makeGrid(dialogLabel, mkCombo(tabNamesLeft), mkCombo(tabNamesRight), mkButton(compareButton)));
 
 		setTitle("Compare Alloy Models");
 
@@ -142,7 +150,7 @@ public class CompareFilesDialog extends JFrame {
 		setResizable(true);
 		setLocationRelativeTo(null);
 		setAlwaysOnTop(false);
-		
+
 		CompareFilesDialog dialog = this;
 		compareButton.addActionListener(new ActionListener() {
 
@@ -154,6 +162,38 @@ public class CompareFilesDialog extends JFrame {
 				dialog.dispose();
 			}
 		});
+	}
+
+	public static JPanel makeGrid(Container label, Container comboLeft, Container comboRight, Container buttonCompare) {
+		JPanel ans = new JPanel(new GridBagLayout());
+		GridBagConstraints gbc = new GridBagConstraints();
+
+		ans.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+
+		gbc.insets = new Insets(5, 5, 5, 5);
+
+		gbc.fill = GridBagConstraints.HORIZONTAL;
+		gbc.gridx = 0;
+		gbc.gridy = 0;
+		ans.add(label, gbc);
+
+		gbc.fill = GridBagConstraints.HORIZONTAL;
+		gbc.gridx = 0;
+		gbc.gridy = 1;
+		ans.add(comboLeft, gbc);
+
+		gbc.fill = GridBagConstraints.HORIZONTAL;
+		gbc.gridx = 0;
+		gbc.gridy = 3;
+		ans.add(comboRight, gbc);
+
+		gbc.fill = GridBagConstraints.HORIZONTAL;
+		gbc.gridx = 0;
+		gbc.gridy = 4;
+		// gbc.gridwidth = 2;
+		ans.add(buttonCompare, gbc);
+
+		return ans;
 	}
 
 	@SuppressWarnings({ "unchecked" })
