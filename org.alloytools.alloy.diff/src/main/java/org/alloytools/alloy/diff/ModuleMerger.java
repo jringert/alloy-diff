@@ -488,7 +488,8 @@ public class ModuleMerger {
 	 */
 	private static Expr generateSigAttributeConstraints(Sig s, Sig old, Expr c) {
 		if (old.isAbstract != null && s.isAbstract == null) {
-			c = c.and(s.no());
+			//without inheritence, abstract has no impact
+			//c = c.and(s.no()); 
 		}
 
 		if (old.isLone != null && s.isLone == null) {

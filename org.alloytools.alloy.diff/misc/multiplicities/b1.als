@@ -2,7 +2,7 @@ module b1
 
 sig Object{}
 
-sig Branch extends Object {}
+sig Branch {}
 
 sig Bank{
   branches: some (Branch + Bank)
