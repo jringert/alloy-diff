@@ -1,6 +1,7 @@
 package org.alloytools.alloy.diff;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -16,8 +17,10 @@ import org.junit.Test;
 
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.ErrorWarning;
+import edu.mit.csail.sdg.alloy4.SafeList;
 import edu.mit.csail.sdg.ast.Module;
 import edu.mit.csail.sdg.ast.Sig;
+import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.parser.CompUtil;
 
 public class ModuleMergerTest {
@@ -83,8 +86,29 @@ public class ModuleMergerTest {
 
 		Collection<Sig> sigs = new ModuleMerger().mergeSigs(v1, v2);
 
-		assertEquals(3, sigs.size());
+		assertEquals(1, getFieldCount(sigs));
+	}
 
+	/**
+	 * tests if field names Ex. TODO
+	 */
+	@Test
+	public void testFields2() {
+
+		Module v1 = CompUtil.parseEverything_fromFile(rep, null, "misc/multiplicities/tests/fieldTest2v1.als");
+		Module v2 = CompUtil.parseEverything_fromFile(rep, null, "misc/multiplicities/tests/fieldTest2v2.als");
+
+		Collection<Sig> sigs = new ModuleMerger().mergeSigs(v1, v2);
+
+		assertEquals(3, getFieldCount(sigs));
+	}
+	
+	private int getFieldCount(Collection<Sig> sigs) {
+		int fieldCount = 0;
+		for (Sig sig : sigs) {
+			fieldCount = fieldCount + sig.getFields().size();
+		}
+		return fieldCount;
 	}
 
 	@Test
@@ -184,6 +208,122 @@ public class ModuleMergerTest {
 			names.add(s.label);
 		}
 		return names;
+	}
+
+	private Set<String> getFieldNames(Iterable<Sig> allSigs) {
+		Set<String> names = new HashSet<String>();
+		Set<String> fields = new HashSet<String>();
+		for (Sig s : allSigs) {
+			for (Field field : s.getFields()) {
+				names.add(field.label);
+			}
+		}
+		return names;
+	}
+
+	private int getFieldCount(String sigName, SafeList<Sig> sigList) {
+		int fieldCount = 0;
+		for (Sig s : sigList) {
+			if (s.label.equals(sigName)) {
+				return s.getFields().size();
+			}
+		}
+		return fieldCount;
+	}
+
+	@Test
+	public void mergeFieldNamesTest() throws Exception {
+		Files.find(Paths.get("misc"), Integer.MAX_VALUE, (filePath, fileAttr) -> fileAttr.isRegularFile())
+				.forEach(p1 -> {
+					try {
+						Files.find(Paths.get("misc"), Integer.MAX_VALUE,
+								(filePath, fileAttr) -> fileAttr.isRegularFile())
+								.forEach(p2 -> mergeFieldNames(p1, p2));
+					} catch (IOException e) {
+						e.printStackTrace();
+						fail();
+					}
+				});
+	}
+
+	private void mergeFieldNames(Path p1, Path p2) {
+		Module v1 = CompUtil.parseEverything_fromFile(rep, null, p1.toString());
+		Module v2 = CompUtil.parseEverything_fromFile(rep, null, p2.toString());
+
+		Set<String> allSigNamesv1 = getSigNames(v1.getAllSigs());
+		Set<String> allSigNamesv2 = getSigNames(v2.getAllSigs());
+
+		Set<Sig> unique1 = new HashSet<Sig>();
+		Set<Sig> unique2 = new HashSet<Sig>();
+
+		for (Sig s : v1.getAllSigs()) {
+			unique1.add(s);
+		}
+		for (Sig s2 : v2.getAllSigs()) {
+			unique2.add(s2);
+		}
+
+		Iterable<Sig> mergedSigs = new ModuleMerger().mergeSigs(v1, v2);
+		
+		// not unique
+		for (String s : allSigNamesv1) {
+			for (String s2 : allSigNamesv2) {
+				if (s.equals(s2)) {
+					// min no of fields should be the max no of fields in either module
+					// max no of fields needs to be the sum of fields.
+					int noOfFieldsinS1 = getFieldCount(s, v1.getAllSigs());
+					int noOfFieldsinS2 = getFieldCount(s2, v2.getAllSigs());
+
+					int fieldCount = getFieldCount(s, mergedSigs);
+
+					boolean val = false;
+
+					if (fieldCount == Math.min(noOfFieldsinS1, noOfFieldsinS2)) {
+						val = true;
+					} else if (fieldCount == (noOfFieldsinS1 + noOfFieldsinS2)) {
+						val = true;
+					}
+					unique1.remove(s);
+					unique2.remove(s2);
+
+					assertTrue(val);
+				}
+			}
+		}
+		
+		// unique
+		{
+			// no of fields should be the same as in the original module
+			for (Sig s : unique1) {
+				System.out.println(s.label + " " + p1 );
+				assertEquals(s.getFields().size(), getFieldCount(s.label, mergedSigs));
+			}
+			for (Sig s2 : unique2) {
+				System.out.println(s2.label + " " + p2 );
+				assertEquals(s2.getFields().size(), getFieldCount(s2.label, mergedSigs));
+			}
+		}
+
+	}
+
+	private int getFieldCount(String sigName, Iterable<Sig> mergedSigs) {
+		int fieldCount = 0;
+		for (Sig s : mergedSigs) {
+			if (s.label.equals(sigName)) {
+				return s.getFields().size();
+			}
+		}
+		return fieldCount;
+	}
+
+	private SafeList<Field> getFields(String sName, Iterable<Sig> allSigs) {
+		// int fieldCount = 0;
+		for (Sig s : allSigs) {
+			if (s.label.equals(sName)) {
+				return s.getFields();
+			}
+		}
+		return null;
 	}
 
 }

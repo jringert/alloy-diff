@@ -11,25 +11,20 @@
 <sig label="String" ID="3" parentID="2" builtin="yes">
 </sig>
 
-<sig label="this/Customer" ID="4" parentID="2">
-   <atom label="Customer$0"/>
-   <atom label="Customer$1"/>
+<sig label="this/Bank" ID="4" parentID="2" lone="yes">
+   <atom label="Bank$0"/>
 </sig>
 
-<field label="livesAt" ID="5" parentID="4">
-   <tuple> <atom label="Customer$0"/> <atom label="Address$1"/> </tuple>
-   <tuple> <atom label="Customer$1"/> <atom label="Address$0"/> </tuple>
+<field label="branches" ID="5" parentID="4">
+   <tuple> <atom label="Bank$0"/> <atom label="Branch$0"/> </tuple>
+   <tuple> <atom label="Bank$0"/> <atom label="Branch$1"/> </tuple>
    <types> <type ID="4"/> <type ID="6"/> </types>
 </field>
 
-<sig label="this/Address" ID="6" parentID="2">
-   <atom label="Address$0"/>
-   <atom label="Address$1"/>
+<sig label="this/Branch" ID="6" parentID="2">
+   <atom label="Branch$0"/>
+   <atom label="Branch$1"/>
 </sig>
-
-<field label="field" ID="7" parentID="6">
-   <types> <type ID="6"/> <type ID="1"/> </types>
-</field>
 
 <sig label="univ" ID="2" builtin="yes">
 </sig>

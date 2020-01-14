@@ -100,13 +100,131 @@ public class ModuleMerger {
 
 		return sigs.values();
 	}
+	
 
+	/**
+	 * Creates a merged signature and adds constraints c1 c2 for individual sigs
+	 *
+	 * @param s1
+	 * @param s2
+	 * @return
+	 */
+	private static Sig mergeSig(Sig s1, Sig s2) {
+		Sig s = new PrimSig(s1.label, getCommonSigAttributes(s1, s2));
+		c1 = generateSigAttributeConstraints(s, s1, c1);
+		c2 = generateSigAttributeConstraints(s, s2, c2);
+
+		return s;
+	}
+
+	/**
+	 *
+	 * FIXME: only works for fields of the same arity as a workaround fields with
+	 * lower arity could be padded with a singleton signature. However, this would
+	 * require changing all expressions on fields.
+	 *
+	 * FIXME: messes up with field references inside field declarations; check this!
+	 *
+	 * @param mergedSig
+	 * @param fields1
+	 * @param fields2
+	 */
+	private static void mergeFields(Sig mergedSig, SafeList<Field> fields1, SafeList<Field> fields2) {
+		Set<Field> unique1 = new HashSet<Sig.Field>();
+		Set<Field> unique2 = new HashSet<Sig.Field>();
+
+		for (Field f1 : fields1) {
+			unique1.add(f1);
+		}
+		for (Field f2 : fields2) {
+			unique2.add(f2);
+		}
+
+		for (Field f1 : fields1) {
+			for (Field f2 : fields2) {
+				if (f1.label.equals(f2.label)) {
+					if (f1.decl().expr instanceof ExprUnary && f2.decl().expr instanceof ExprUnary) {
+						ExprUnary e1 = (ExprUnary)replaceSigRefs(f1.decl().expr);
+						ExprUnary e2 = (ExprUnary)replaceSigRefs(f2.decl().expr);
+						Expr union = e1.sub.plus(e2.sub);
+						ExprUnary.Op op = getMergeOp(e1.op, e2.op);
+						Field f = mergedSig.addField(f1.label, op.make(f1.pos, union));
+
+						Expr e1mult = getArrowForOp(e1.op).make(f1.pos, f1.closingBracket, mergedSig, e1.sub);
+						Expr e2mult = getArrowForOp(e2.op).make(f2.pos, f2.closingBracket, mergedSig, e2.sub);
+						c1 = c1.and(f.decl().get().in(e1mult));
+						c2 = c2.and(f.decl().get().in(e2mult));
+
+						unique1.remove(f1);
+						unique2.remove(f2);
+						break;
+					} else if (f1.decl().expr instanceof ExprBinary && f2.decl().expr instanceof ExprBinary) {
+						Expr e1 = replaceSigRefs(f1.decl().expr);
+						Expr e2 = replaceSigRefs(f2.decl().expr);
+						Expr union = replaceArrows(e1).plus(replaceArrows(e2));
+						Field f = mergedSig.addField(f1.label, union);
+
+						Expr e1mult = ExprBinary.Op.ARROW.make(f1.pos, f1.closingBracket, mergedSig, e1);
+						Expr e2mult = ExprBinary.Op.ARROW.make(f2.pos, f2.closingBracket, mergedSig, e2);
+						c1 = c1.and(f.decl().get().in(e1mult));
+						c2 = c2.and(f.decl().get().in(e2mult));
+
+						unique1.remove(f1);
+						unique2.remove(f2);
+
+					} else {
+						throw new RuntimeException("Mix of field arities " + f1.pos.filename);
+					}
+				}
+			}
+		}
+
+		for (Field f : unique1) {
+			addUniqueField(mergedSig, f, true);
+		}
+		for (Field f : unique2) {
+			addUniqueField(mergedSig, f, false);
+		}
+	}
+
+	
 	private static void addFields(Sig s, SafeList<Field> fields) {
 		for (Field f : fields) {
 			s.addField(f.label, replaceSigRefs(f.decl().expr));
 		}
 	}
 
+	private static void addUniqueField(Sig mergedSig, Field field, boolean inC1) {
+		Field f;
+		Expr e = replaceSigRefs(field.decl().expr);
+		if (e instanceof ExprUnary) {
+			ExprUnary.Op op = getMergeOp(((ExprUnary) e).op, ExprUnary.Op.SETOF);
+			f = mergedSig.addField(field.label, op.make(field.pos, ((ExprUnary) e).sub));
+			if (inC1) {
+				Expr e1mult = getArrowForOp(((ExprUnary) e).op).make(field.pos, field.closingBracket, mergedSig,
+						((ExprUnary) e).sub);
+				c1 = c1.and(f.decl().get().in(e1mult));
+				c2 = c2.and(f.decl().get().no());
+			} else {
+				c1 = c1.and(f.decl().get().no());
+				Expr e2mult = getArrowForOp(((ExprUnary) e).op).make(field.pos, field.closingBracket, mergedSig,
+						((ExprUnary) e).sub);
+				c2 = c2.and(f.decl().get().in(e2mult));
+			}
+		} else if (e instanceof ExprBinary) {
+			f = mergedSig.addField(field.label, e);
+			if (inC1) {
+				Expr e1mult = ExprBinary.Op.ARROW.make(field.pos, field.closingBracket, mergedSig, e);
+				c1 = c1.and(f.decl().get().in(e1mult));
+				c2 = c2.and(f.decl().get().no());
+			} else {
+				c1 = c1.and(f.decl().get().no());
+				Expr e2mult = ExprBinary.Op.ARROW.make(field.pos, field.closingBracket, mergedSig, e);
+				c2 = c2.and(f.decl().get().in(e2mult));
+			}
+		}
+	}
+	
 	private static List<ExprHasName> replaceSigRefs(ConstList<? extends ExprHasName> es) {
 		List<ExprHasName> l = new ArrayList<>();
 		for (Expr e : es) {
@@ -262,92 +380,7 @@ public class ModuleMerger {
 		return null;
 	}
 
-	/**
-	 * Creates a merged signature and adds constraints c1 c2 for individual sigs
-	 *
-	 * @param s1
-	 * @param s2
-	 * @return
-	 */
-	private static Sig mergeSig(Sig s1, Sig s2) {
-		Sig s = new PrimSig(s1.label, getCommonSigAttributes(s1, s2));
-		c1 = generateSigAttributeConstraints(s, s1, c1);
-		c2 = generateSigAttributeConstraints(s, s2, c2);
 
-		return s;
-	}
-
-	/**
-	 *
-	 * FIXME: only works for fields of the same arity as a workaround fields with
-	 * lower arity could be padded with a singleton signature. However, this would
-	 * require changing all expressions on fields.
-	 *
-	 * FIXME: messes up with field references inside field declarations; check this!
-	 *
-	 * @param mergedSig
-	 * @param fields1
-	 * @param fields2
-	 */
-	private static void mergeFields(Sig mergedSig, SafeList<Field> fields1, SafeList<Field> fields2) {
-		Set<Field> unique1 = new HashSet<Sig.Field>();
-		Set<Field> unique2 = new HashSet<Sig.Field>();
-
-		for (Field f1 : fields1) {
-			unique1.add(f1);
-		}
-		for (Field f2 : fields2) {
-			unique2.add(f2);
-		}
-
-		for (Field f1 : fields1) {
-			for (Field f2 : fields2) {
-				if (f1.label.equals(f2.label)) {
-					if (f1.decl().expr instanceof ExprUnary && f2.decl().expr instanceof ExprUnary) {
-						Expr e1 = replaceSigRefs(((ExprUnary) f1.decl().expr).sub);
-						Expr e2 = replaceSigRefs(((ExprUnary) f2.decl().expr).sub);
-						Expr union = e1.plus(e2);
-						ExprUnary.Op op = getMergeOp(((ExprUnary) f1.decl().expr).op, ((ExprUnary) f2.decl().expr).op);
-						Field f = mergedSig.addField(f1.label, op.make(f1.pos, union));
-
-						Expr e1mult = getArrowForOp(((ExprUnary) f1.decl().expr).op).make(f1.pos, f1.closingBracket,
-								mergedSig, e1);
-						Expr e2mult = getArrowForOp(((ExprUnary) f2.decl().expr).op).make(f2.pos, f2.closingBracket,
-								mergedSig, e2);
-						c1 = c1.and(f.decl().get().in(e1mult));
-						c2 = c2.and(f.decl().get().in(e2mult));
-
-						unique1.remove(f1);
-						unique2.remove(f2);
-						break;
-					} else if (f1.decl().expr instanceof ExprBinary && f2.decl().expr instanceof ExprBinary) {
-						Expr e1 = replaceSigRefs(f1.decl().expr);
-						Expr e2 = replaceSigRefs(f2.decl().expr);
-						Expr union = replaceArrows(e1).plus(replaceArrows(e2));
-						Field f = mergedSig.addField(f1.label, union);
-
-						Expr e1mult = ExprBinary.Op.ARROW.make(f1.pos, f1.closingBracket, mergedSig, e1);
-						Expr e2mult = ExprBinary.Op.ARROW.make(f2.pos, f2.closingBracket, mergedSig, e2);
-						c1 = c1.and(f.decl().get().in(e1mult));
-						c2 = c2.and(f.decl().get().in(e2mult));
-
-						unique1.remove(f1);
-						unique2.remove(f2);
-
-					} else {
-						throw new RuntimeException("Mix of field arities " + f1.pos.filename);
-					}
-				}
-			}
-		}
-
-		for (Field f : unique1) {
-			addUniqueField(mergedSig, f, true);
-		}
-		for (Field f : unique2) {
-			addUniqueField(mergedSig, f, false);
-		}
-	}
 
 	/**
 	 * replaces any arrow inside binary expressions by the default arrow "->"
@@ -447,36 +480,7 @@ public class ModuleMerger {
 		}
 	}
 
-	private static void addUniqueField(Sig mergedSig, Field field, boolean inC1) {
-		Field f;
-		Expr e = replaceSigRefs(field.decl().expr);
-		if (e instanceof ExprUnary) {
-			ExprUnary.Op op = getMergeOp(((ExprUnary) e).op, ExprUnary.Op.SETOF);
-			f = mergedSig.addField(field.label, op.make(field.pos, ((ExprUnary) e).sub));
-			if (inC1) {
-				Expr e1mult = getArrowForOp(((ExprUnary) e).op).make(field.pos, field.closingBracket, mergedSig,
-						((ExprUnary) e).sub);
-				c1 = c1.and(f.decl().get().in(e1mult));
-				c2 = c2.and(f.decl().get().no());
-			} else {
-				c1 = c1.and(f.decl().get().no());
-				Expr e2mult = getArrowForOp(((ExprUnary) e).op).make(field.pos, field.closingBracket, mergedSig,
-						((ExprUnary) e).sub);
-				c2 = c2.and(f.decl().get().in(e2mult));
-			}
-		} else if (e instanceof ExprBinary) {
-			f = mergedSig.addField(field.label, e);
-			if (inC1) {
-				Expr e1mult = ExprBinary.Op.ARROW.make(field.pos, field.closingBracket, mergedSig, e);
-				c1 = c1.and(f.decl().get().in(e1mult));
-				c2 = c2.and(f.decl().get().no());
-			} else {
-				c1 = c1.and(f.decl().get().no());
-				Expr e2mult = ExprBinary.Op.ARROW.make(field.pos, field.closingBracket, mergedSig, e);
-				c2 = c2.and(f.decl().get().in(e2mult));
-			}
-		}
-	}
+
 
 	/**
 	 * create constraints for attributes
@@ -509,7 +513,7 @@ public class ModuleMerger {
 
 	/**
 	 * keep all common attributes
-	 *
+	 * FIXME for multiplicities is should be better to take the least upper bound 
 	 * @param s1
 	 * @param s2
 	 * @return
