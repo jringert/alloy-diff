@@ -54,10 +54,10 @@ public class ModuleMerger {
 		c2 = ExprConstant.TRUE;
 
 		// fill look-up tables
-		for (Sig s : v1.getAllSigs()) {
+		for (Sig s : v1.getAllReachableUserDefinedSigs()) {
 			v1Sigs.put(s.toString(), s);
 		}
-		for (Sig s : v2.getAllSigs()) {
+		for (Sig s : v2.getAllReachableUserDefinedSigs()) {
 			v2Sigs.put(s.toString(), s);
 		}
 
