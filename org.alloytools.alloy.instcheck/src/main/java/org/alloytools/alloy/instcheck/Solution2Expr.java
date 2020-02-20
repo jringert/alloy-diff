@@ -64,7 +64,10 @@ public class Solution2Expr {
 			if (line.contains("<:")) {
 				String tmp = line.split("<:")[1];
 				String rel = tmp.split("=")[0];
-				for (String tuple : tmp.split("=")[1].replace("{", "").replace("}", "").replace(" ", "").split(",")) {					
+				for (String tuple : tmp.split("=")[1].replace("{", "").replace("}", "").replace(" ", "").split(",")) {
+					if (tuple.isEmpty()) {
+						break;
+					}
 					Sig sig = atomSigs.get(tuple.split("->")[0]);
 					Field f = findField(sig, rel);
 					if (f == null) {
@@ -84,7 +87,7 @@ public class Solution2Expr {
 	 * @return
 	 */
 	private Field findField(Sig sig, String rel) {
-		if (sig.equals(Sig.UNIV)) {
+		if (sig == null || sig.equals(Sig.UNIV)) {
 			return null;
 		}
 		for (Field f : sig.getFields()) {
@@ -181,6 +184,9 @@ public class Solution2Expr {
 			} else {
 				allAtoms = allAtoms.plus(s);
 			}
+		}
+		if (allAtoms == null) {
+			allAtoms = ExprConstant.EMPTYNESS;
 		}
 		return allAtoms;
 	}
