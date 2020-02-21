@@ -13,6 +13,13 @@ import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 
 public class CheckSolution {
 
+	public static boolean check(Module m, A4Solution sol) {
+		A4Options options = new A4Options();
+		options.solver = A4Options.SatSolver.SAT4J;
+
+		return check(m, sol, options);
+	}
+
 	/**
 	 * checks whether the solution is a solution for the first run command of the
 	 * provided module
@@ -21,7 +28,7 @@ public class CheckSolution {
 	 * @param sol
 	 * @return
 	 */
-	public static boolean check(Module m, A4Solution sol) {
+	public static boolean check(Module m, A4Solution sol, A4Options options) {
 		if (sol.satisfiable()) {
 			Solution2Expr s2e = new Solution2Expr();
 			Expr instExpr = s2e.getExpr(m, sol);
@@ -31,9 +38,6 @@ public class CheckSolution {
 
 			List<Sig> sigs = new ArrayList<>(m.getAllReachableSigs());
 			sigs.addAll(s2e.getAtomSigs());
-
-			A4Options options = new A4Options();
-			options.solver = A4Options.SatSolver.SAT4J;
 
 			sol = TranslateAlloyToKodkod.execute_command(null, sigs, cmd, options);
 

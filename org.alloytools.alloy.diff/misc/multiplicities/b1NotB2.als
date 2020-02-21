@@ -14,4 +14,4 @@ pred b2 {
   //all b : Bank | #b.branches =1
 }
 
-run {b1 and not b2} for 200
+run {b1 and not b2} for 20
