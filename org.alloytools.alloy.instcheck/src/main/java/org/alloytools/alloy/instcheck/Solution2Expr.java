@@ -82,6 +82,8 @@ public class Solution2Expr {
 	/**
 	 * finds a field for the given relation or returns null if field is not found
 	 * 
+	 * FIXME for cases with subsetsig we need to look downwards, e.g., a PrimSig could  have a field defined in a SubsetSig below 
+	 * 
 	 * @param sig
 	 * @param rel
 	 * @return

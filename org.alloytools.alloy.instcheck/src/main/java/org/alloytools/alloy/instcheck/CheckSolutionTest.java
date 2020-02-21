@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -45,16 +47,24 @@ class CheckSolutionTest {
 		options.solver = A4Options.SatSolver.SAT4J;
 
 		A4Solution sol = null;
-		try {			
-			sol = TranslateAlloyToKodkod.execute_command(null, m.getAllReachableSigs(), m.getAllCommands().get(0),
-					options);
+		try {
+			sol = TranslateAlloyToKodkod.execute_command(null, m.getAllReachableSigs(), m.getAllCommands().get(0), options);
 		} catch (Exception e) {
 			// ignore type errors etc in original specs
 			return;
 		}
 
-		if (sol.satisfiable()) {
-			assertTrue(CheckSolution.check(m, sol, options));
+		List<A4Solution> sols = new ArrayList<>();
+
+		// have to calculate in advance otherwise solver has NullPointers when trying to
+		// get next solution
+		while (sol.satisfiable() && sols.size() < 10) {
+			sols.add(sol);
+			sol = sol.next();
+		}
+		for (A4Solution s : sols) {
+			System.out.println(s);
+			assertTrue(CheckSolution.check(m, s, options));
 		}
 	}
 
