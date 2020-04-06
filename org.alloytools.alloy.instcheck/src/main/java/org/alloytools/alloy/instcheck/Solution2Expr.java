@@ -23,6 +23,8 @@ public class Solution2Expr {
 	private Map<String, Sig> atomSigs;
 	private Map<Field, List<String>> tuples;
 
+	private FieldUtil fieldUtil;
+
 	public Expr getExpr(Module m, A4Solution sol) {
 		if (!sol.satisfiable()) {
 			return ExprConstant.FALSE;
@@ -30,6 +32,7 @@ public class Solution2Expr {
 
 		Expr e = ExprConstant.TRUE;
 
+		fieldUtil = new FieldUtil(m);
 		atomSigs = new HashMap<>();
 
 		for (ExprVar ev : sol.getAllAtoms()) {
@@ -82,7 +85,8 @@ public class Solution2Expr {
 	/**
 	 * finds a field for the given relation or returns null if field is not found
 	 * 
-	 * FIXME for cases with subsetsig we need to look downwards, e.g., a PrimSig could  have a field defined in a SubsetSig below 
+	 * NOTE: This code needs to unpack the signature before using the FieldUtils
+	 * class (the current signature is a child of a signature from the module).
 	 * 
 	 * @param sig
 	 * @param rel
@@ -92,22 +96,8 @@ public class Solution2Expr {
 		if (sig == null || sig.equals(Sig.UNIV)) {
 			return null;
 		}
-		for (Field f : sig.getFields()) {
-			if (f.label.equals(rel)) {
-				return f;
-			}
-		}
-		if (sig instanceof SubsetSig) {
-			for (Sig p : ((SubsetSig) sig).parents) {
-				Field f = findField(p, rel);
-				if (f != null) {
-					return f;
-				}
-			}
-		} else if (sig instanceof PrimSig) {
-			return findField(((PrimSig) sig).parent, rel);
-		}
-		return null;
+
+		return fieldUtil.getField(((PrimSig) sig).parent, rel);
 	}
 
 	/**
