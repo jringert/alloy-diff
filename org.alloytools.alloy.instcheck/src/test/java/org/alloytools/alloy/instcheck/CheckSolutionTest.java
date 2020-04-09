@@ -17,6 +17,14 @@ import edu.mit.csail.sdg.translator.A4Solution;
 import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 
 class CheckSolutionTest {
+	
+	@Test
+	public void ckeckSelfSolutionSimpleTest() throws Exception {
+//		checkSolutionSelf(Paths.get("../org.alloytools.alloy.diff/misc/string/string2.als"));
+//		checkSolutionSelf(Paths.get("../models-master/ietf-rfcs/rfc7617-BasicAuth/basic-auth.als"));
+//		checkSolutionSelf(Paths.get("..\\models-master\\simple-models\\state-machine\\flip-flop.als"));
+		
+	}
 
 	@Test
 	public void ckeckSelfSolutionTest() throws Exception {
@@ -26,7 +34,13 @@ class CheckSolutionTest {
 
 	@Test
 	public void ckeckSelfSolutionAllAlloyTest() throws Exception {
-		Files.find(Paths.get("../org.alloytools.alloy.extra/extra/models"), Integer.MAX_VALUE,
+		Files.find(Paths.get("../org.alloytools.alloy.extra/extra/models/examples"), Integer.MAX_VALUE,
+				(filePath, fileAttr) -> fileAttr.isRegularFile()).forEach(f -> checkSolutionSelf(f));
+	}
+
+	@Test
+	public void ckeckSelfSolutionAllAlloyModelsMasterTest() throws Exception {
+		Files.find(Paths.get("../models-master"), Integer.MAX_VALUE,
 				(filePath, fileAttr) -> fileAttr.isRegularFile()).forEach(f -> checkSolutionSelf(f));
 	}
 
@@ -63,7 +77,7 @@ class CheckSolutionTest {
 			sol = sol.next();
 		}
 		for (A4Solution s : sols) {
-			System.out.println(s);
+//			System.out.println(s);
 			assertTrue(CheckSolution.check(m, s, options));
 		}
 	}

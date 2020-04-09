@@ -14,6 +14,36 @@ import edu.mit.csail.sdg.ast.Sig.SubsetSig;
 /**
  * Flatten all modules to remove inheritance.
  * 
+ * Main ideas:
+ * 
+ * replace signatures by signatures that have all inherited fields <br>
+ * Two main cases:<br>
+ * <b>extends</b> -> easy case where all fields are copied to all extending
+ * signatures<br>
+ * <b>in</b> -> more tricky:
+ * <ul>
+ * <li>subset signatures are not really existing</li>
+ * <li>there is no instance of subset signatures that is not an instance of a
+ * primitive signature</li>
+ * <li>a relation in a subset signature cannot be represented without
+ * inheritance in a primitive signature (left types of relation are of other
+ * signatures)</li>
+ * <li>after a subset signature only further subset signatures are allowed that
+ * could add more fields</li>
+ * <li>a signature can have multiple subset signatures (even the same subset
+ * signature directly and indirectly multiple times)</li>
+ * <li>attributes that come from subset signatures are optional but if one from
+ * a specific subset signature is there then all others of that subset
+ * signatures must also be there</li>
+ * </ul>
+ * 
+ * <p>Another important aspect is to replace references to signatures in any expressions. 
+ * <ul>
+ * <li><b>primitive signature</b> replace reference by union of it and all its children</li>
+ * <li><b>subset signature</b> replace reference by union of it and all its children</li>
+ * </ul>
+ * </p>
+ * 
  * @author ringert
  *
  */

@@ -15,7 +15,6 @@ import edu.mit.csail.sdg.ast.Module;
 import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.ast.Sig.PrimSig;
-import edu.mit.csail.sdg.ast.Sig.SubsetSig;
 import edu.mit.csail.sdg.translator.A4Solution;
 
 public class Solution2Expr {
@@ -36,19 +35,18 @@ public class Solution2Expr {
 		atomSigs = new HashMap<>();
 
 		for (ExprVar ev : sol.getAllAtoms()) {
-			String sigName = ev.type().toString().replace("{", "").replace("}", "");
-			Sig s = getSig(m, sigName);
-
-			if (s == null) {
-				throw new RuntimeException("Signature for atom type " + sigName + " not found.");
-			}
+			Sig s = ev.type().iterator().next().get(0);
 
 			if (s instanceof PrimSig) {
-				String name = atom2SigName(ev.label);
-				PrimSig newSig = new PrimSig(name, (PrimSig) s, Attr.ONE);
-				atomSigs.put(ev.label, newSig);
+				if (s.isEnum != null) {					
+					atomSigs.put(ev.label, enumSig(m, ev.label));	
+				} else {
+					String name = atom2SigName(ev.label);
+					PrimSig newSig = new PrimSig(name, (PrimSig) s, Attr.ONE);
+					atomSigs.put(ev.label, newSig);
+				}
 			} else {
-				throw new RuntimeException("Signature for atom type " + sigName + " not is not PrimSig (TODO).");
+				throw new RuntimeException("Signature " + s + " for atom type is not PrimSig (TODO).");
 			}
 		}
 		e = e.and(union(m.getAllReachableUserDefinedSigs()).equal(union(atomSigs.values())));
@@ -60,6 +58,19 @@ public class Solution2Expr {
 		e = e.and(tupleRestrictions());
 
 		return e;
+	}
+
+	private Sig enumSig(Module m, String label) {
+		String eName = label.split("\\$")[0];
+		if (!eName.contains("/")) {
+			eName = "this/" + eName;
+		}
+		for (Sig e : m.getAllReachableSigs()) {
+			if (eName.equals(e.label)) {
+				return e;
+			}
+		}
+		return null;
 	}
 
 	private void findTuplesFromInst(A4Solution sol) {
@@ -85,7 +96,7 @@ public class Solution2Expr {
 	/**
 	 * finds a field for the given relation or returns null if field is not found
 	 * 
-	 * NOTE: This code needs to unpack the signature before using the FieldUtils
+	 * NOTE: This code sometimes needs to unpack the signature before using the FieldUtils
 	 * class (the current signature is a child of a signature from the module).
 	 * 
 	 * @param sig
@@ -115,7 +126,13 @@ public class Solution2Expr {
 					if (tuple == null) {
 						tuple = atomSigs.get(atom);
 					} else {
-						tuple = tuple.product(atomSigs.get(atom));
+						if (atom.startsWith("\"")) {
+							tuple = tuple.product(ExprConstant.Op.STRING.make(null, atom));
+						} else if (isInteger(atom)){
+							tuple = tuple.product(ExprConstant.Op.NUMBER.make(null, Integer.parseInt(atom)));
+						} else {
+							tuple = tuple.product(atomSigs.get(atom));
+						}
 					}
 				}
 
@@ -132,6 +149,15 @@ public class Solution2Expr {
 			}
 		}
 		return tr;
+	}
+
+	private boolean isInteger(String atom) {
+		try {
+			Integer.parseInt(atom);
+		} catch (NumberFormatException e) {
+			return false;
+		}
+		return true;
 	}
 
 	private void setUpTupleLists(Module m) {
@@ -151,15 +177,6 @@ public class Solution2Expr {
 	 */
 	private String atom2SigName(String label) {
 		return label.replace("$", "_instance_");
-	}
-
-	private static Sig getSig(Module m, String name) {
-		for (Sig s : m.getAllReachableUserDefinedSigs()) {
-			if (s.label.equals(name)) {
-				return s;
-			}
-		}
-		return null;
 	}
 
 	/**

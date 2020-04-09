@@ -35,4 +35,4 @@ fact {
 
 pred show( t : set Trace ) { }
 
-run show  for 10
+run show  for 1

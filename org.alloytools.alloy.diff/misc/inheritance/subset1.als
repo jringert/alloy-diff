@@ -10,4 +10,8 @@ sig B in A + C {
   b : some A
 }
 
-run {no B.c}
+sig D in B {
+  d : some C
+}
+
+run {no B}
