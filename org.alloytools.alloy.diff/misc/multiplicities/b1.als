@@ -12,6 +12,6 @@ pred xxx {
 	all b : Bank | #b.branches > 0
 }
 
-fact {Branch + Bank = Object}
+//fact {Branch + Bank = Object}
 
 run xxx for 4

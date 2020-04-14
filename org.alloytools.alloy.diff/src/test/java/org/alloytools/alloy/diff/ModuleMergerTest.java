@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.junit.BeforeClass;
@@ -17,7 +18,6 @@ import org.junit.Test;
 
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.ErrorWarning;
-import edu.mit.csail.sdg.alloy4.SafeList;
 import edu.mit.csail.sdg.ast.Module;
 import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.parser.CompUtil;
@@ -48,8 +48,8 @@ public class ModuleMergerTest {
 		Module v1 = CompUtil.parseEverything_fromFile(rep, null, "misc/multiplicities/tests/testSignatureCountv1.als");
 		Module v2 = CompUtil.parseEverything_fromFile(rep, null, "misc/multiplicities/tests/testSignatureCountv2.als");
 
-		int v1SigsCount = v1.getAllSigs().size();
-		int v2SigsCount = v1.getAllSigs().size();
+		int v1SigsCount = v1.getAllReachableUserDefinedSigs().size();
+		int v2SigsCount = v1.getAllReachableUserDefinedSigs().size();
 
 		Collection<Sig> sigs = ModuleMerger.mergeSigs(v1, v2);
 
@@ -64,10 +64,8 @@ public class ModuleMergerTest {
 	@Test
 	public void testSignatureCountV2() {
 
-		Module v1 = CompUtil.parseEverything_fromFile(rep, null,
-				"misc/multiplicities/tests/v2testSignatureCountv1.als");
-		Module v2 = CompUtil.parseEverything_fromFile(rep, null,
-				"misc/multiplicities/tests/v2testSignatureCountv2.als");
+		Module v1 = CompUtil.parseEverything_fromFile(rep, null, "misc/multiplicities/tests/v2testSignatureCountv1.als");
+		Module v2 = CompUtil.parseEverything_fromFile(rep, null, "misc/multiplicities/tests/v2testSignatureCountv2.als");
 
 		Collection<Sig> sigs = ModuleMerger.mergeSigs(v1, v2);
 
@@ -101,7 +99,7 @@ public class ModuleMergerTest {
 
 		assertEquals(3, getFieldCount(sigs));
 	}
-	
+
 	private int getFieldCount(Collection<Sig> sigs) {
 		int fieldCount = 0;
 		for (Sig sig : sigs) {
@@ -112,7 +110,9 @@ public class ModuleMergerTest {
 
 	@Test
 	public void selfMergeSigCountTest() throws Exception {
-		Files.find(Paths.get("misc"), Integer.MAX_VALUE, (filePath, fileAttr) -> fileAttr.isRegularFile())
+		Files
+				.find(Paths.get("misc"), Integer.MAX_VALUE,
+						(filePath, fileAttr) -> fileAttr.isRegularFile() && filePath.toString().endsWith(".als"))
 				.forEach(f -> selfMergeSigCount(f));
 	}
 
@@ -120,7 +120,7 @@ public class ModuleMergerTest {
 		String fName = f.toString();
 		Module v1 = CompUtil.parseEverything_fromFile(rep, null, fName);
 
-		int sigNum = v1.getAllSigs().size();
+		int sigNum = v1.getAllReachableUserDefinedSigs().size();
 
 		Collection<Sig> sigs = ModuleMerger.mergeSigs(v1, v1);
 
@@ -129,7 +129,9 @@ public class ModuleMergerTest {
 
 	@Test
 	public void selfMergeWithEmptySigCountTest() throws Exception {
-		Files.find(Paths.get("misc"), Integer.MAX_VALUE, (filePath, fileAttr) -> fileAttr.isRegularFile())
+		Files
+				.find(Paths.get("misc"), Integer.MAX_VALUE,
+						(filePath, fileAttr) -> fileAttr.isRegularFile() && filePath.toString().endsWith(".als"))
 				.forEach(f -> selfMergeWithEmptySigCount(f));
 	}
 
@@ -138,7 +140,7 @@ public class ModuleMergerTest {
 		Module v1 = CompUtil.parseEverything_fromFile(rep, null, fName);
 		Module empty = CompUtil.parseEverything_fromFile(rep, null, "misc/empty.als");
 
-		int sigNum = v1.getAllSigs().size();
+		int sigNum = v1.getAllReachableUserDefinedSigs().size();
 
 		Collection<Sig> sigs = ModuleMerger.mergeSigs(v1, empty);
 
@@ -152,12 +154,15 @@ public class ModuleMergerTest {
 
 	@Test
 	public void selfMergeWithOneSigCountTest() throws Exception {
-		Files.find(Paths.get("misc"), Integer.MAX_VALUE, (filePath, fileAttr) -> fileAttr.isRegularFile())
+		Files
+				.find(Paths.get("misc/string/string2.als"), Integer.MAX_VALUE,
+						(filePath, fileAttr) -> fileAttr.isRegularFile() && filePath.toString().endsWith(".als"))
 				.forEach(f -> selfMergeWithOneSigCount(f));
 	}
 
 	public void selfMergeWithOneSigCount(Path f) {
 		String fName = f.toString();
+//		System.out.println(fName);
 		Module v1 = CompUtil.parseEverything_fromFile(rep, null, fName);
 		Module one = CompUtil.parseEverything_fromFile(rep, null, "misc/one.als");
 
@@ -165,7 +170,7 @@ public class ModuleMergerTest {
 			return;
 		}
 
-		int sigNum = v1.getAllSigs().size();
+		int sigNum = v1.getAllReachableUserDefinedSigs().size();
 
 		Collection<Sig> sigs = ModuleMerger.mergeSigs(v1, one);
 
@@ -178,11 +183,13 @@ public class ModuleMergerTest {
 
 	@Test
 	public void mergeSigNamesTest() throws Exception {
-		Files.find(Paths.get("misc"), Integer.MAX_VALUE, (filePath, fileAttr) -> fileAttr.isRegularFile())
-				.forEach(p1 -> {
+		Files.find(Paths.get("misc"), Integer.MAX_VALUE,
+				(filePath, fileAttr) -> fileAttr.isRegularFile() && filePath.toString().endsWith(".als")).forEach(p1 -> {
 					try {
-						Files.find(Paths.get("misc"), Integer.MAX_VALUE,
-								(filePath, fileAttr) -> fileAttr.isRegularFile()).forEach(p2 -> mergeSigNames(p1, p2));
+						Files
+								.find(Paths.get("misc"), Integer.MAX_VALUE,
+										(filePath, fileAttr) -> fileAttr.isRegularFile() && filePath.toString().endsWith(".als"))
+								.forEach(p2 -> mergeSigNames(p1, p2));
 					} catch (IOException e) {
 						e.printStackTrace();
 						fail();
@@ -194,8 +201,8 @@ public class ModuleMergerTest {
 		Module v1 = CompUtil.parseEverything_fromFile(rep, null, p1.toString());
 		Module v2 = CompUtil.parseEverything_fromFile(rep, null, p2.toString());
 
-		Set<String> allNames = getSigNames(v1.getAllSigs());
-		allNames.addAll(getSigNames(v2.getAllSigs()));
+		Set<String> allNames = getSigNames(v1.getAllReachableUserDefinedSigs());
+		allNames.addAll(getSigNames(v2.getAllReachableUserDefinedSigs()));
 
 		Set<String> mergedNames = getSigNames(ModuleMerger.mergeSigs(v1, v2));
 		assertEquals(allNames, mergedNames);
@@ -211,11 +218,12 @@ public class ModuleMergerTest {
 
 	@Test
 	public void mergeFieldNamesTest() throws Exception {
-		Files.find(Paths.get("misc"), Integer.MAX_VALUE, (filePath, fileAttr) -> fileAttr.isRegularFile())
-				.forEach(p1 -> {
+		Files.find(Paths.get("misc"), Integer.MAX_VALUE,
+				(filePath, fileAttr) -> fileAttr.isRegularFile() && filePath.toString().endsWith(".als")).forEach(p1 -> {
 					try {
-						Files.find(Paths.get("misc"), Integer.MAX_VALUE,
-								(filePath, fileAttr) -> fileAttr.isRegularFile())
+						Files
+								.find(Paths.get("misc"), Integer.MAX_VALUE,
+										(filePath, fileAttr) -> fileAttr.isRegularFile() && filePath.toString().endsWith(".als"))
 								.forEach(p2 -> mergeFieldNames(p1, p2));
 					} catch (IOException e) {
 						e.printStackTrace();
@@ -228,17 +236,16 @@ public class ModuleMergerTest {
 		Module v1 = CompUtil.parseEverything_fromFile(rep, null, p1.toString());
 		Module v2 = CompUtil.parseEverything_fromFile(rep, null, p2.toString());
 
-		SafeList<Sig> allSigsv1 = v1.getAllSigs();
-		SafeList<Sig> allSigsv2 = v2.getAllSigs();
+		List<Sig> allSigsv1 = v1.getAllReachableUserDefinedSigs();
+		List<Sig> allSigsv2 = v2.getAllReachableUserDefinedSigs();
 
 		Set<Sig> unique1 = new HashSet<Sig>();
-		unique1.addAll(allSigsv1.makeCopy());
+		unique1.addAll(allSigsv1);
 		Set<Sig> unique2 = new HashSet<Sig>();
-		unique2.addAll(allSigsv2.makeCopy());
-		
+		unique2.addAll(allSigsv2);
 
 		Iterable<Sig> mergedSigs = ModuleMerger.mergeSigs(v1, v2);
-		
+
 		// not unique
 		for (Sig s : allSigsv1) {
 			for (Sig s2 : allSigsv2) {
@@ -252,22 +259,22 @@ public class ModuleMergerTest {
 					assertTrue(fieldCount >= Math.max(noOfFieldsinS1, noOfFieldsinS2));
 					// max no of merged fields needs to be the sum of fields.
 					assertTrue(fieldCount <= (noOfFieldsinS1 + noOfFieldsinS2));
-					
+
 					unique1.remove(s);
 					unique2.remove(s2);
 				}
 			}
 		}
-		
+
 		// unique
 		{
 			// no of fields should be the same as in the original module
 			for (Sig s : unique1) {
-				System.out.println(s.label + " " + p1 );
+//				System.out.println(s.label + " " + p1);
 				assertEquals(s.getFields().size(), getFieldCount(s.label, mergedSigs));
 			}
 			for (Sig s2 : unique2) {
-				System.out.println(s2.label + " " + p2 );
+//				System.out.println(s2.label + " " + p2);
 				assertEquals(s2.getFields().size(), getFieldCount(s2.label, mergedSigs));
 			}
 		}

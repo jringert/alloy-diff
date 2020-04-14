@@ -11,14 +11,19 @@ import java.nio.file.Paths;
 import org.junit.Test;
 
 import edu.mit.csail.sdg.ast.ExprVar;
+import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.translator.A4Solution;
 
 public class ModuleDiffTest {
 
+	String[] sigFolders = new String[] { "misc/enum/enum2.als", };
+
 	@Test
 	public void diffSelfEmptyTest() throws Exception {
-		Files.find(Paths.get("misc"), Integer.MAX_VALUE, (filePath, fileAttr) -> fileAttr.isRegularFile())
-				.forEach(f -> diffSelfEmpty(f));
+		for (String folder : sigFolders) {
+			Files.find(Paths.get(folder), Integer.MAX_VALUE, (filePath, fileAttr) -> fileAttr.isRegularFile())
+					.forEach(f -> diffSelfEmpty(f));
+		}
 	}
 
 	/**
@@ -35,35 +40,40 @@ public class ModuleDiffTest {
 
 	@Test
 	public void diffEmptySelfTest() throws Exception {
-		Files.find(Paths.get("misc"), Integer.MAX_VALUE, (filePath, fileAttr) -> fileAttr.isRegularFile())
-				.forEach(f -> diffEmptySelf(f));
+		for (String folder : sigFolders) {
+			Files.find(Paths.get(folder), Integer.MAX_VALUE, (filePath, fileAttr) -> fileAttr.isRegularFile())
+					.forEach(f -> diffEmptySelf(f));
+		}
 	}
 
 	/**
-	 * Checks whether the current module has instances that the empty module doesn't.
-	 * This should be the case. However, it could be that the current module is
-	 * sat only for the empty solution.  
+	 * Checks whether the current module has instances that the empty module
+	 * doesn't. This should be the case. However, it could be that the current
+	 * module is sat only for the empty solution.
 	 * 
 	 * @param f
 	 */
 	private void diffEmptySelf(Path f) {
 		A4Solution ans = ModuleDiff.diff("misc/empty.als", f.toString());
-		
+
 		if (ans.satisfiable()) {
-			assertTrue("Empty module had an empty diff with " + f.toString(), size(ans) > 0);	
+			assertTrue("Empty module had an empty diff with " + f.toString(), size(ans) > 0);
 		} else {
 			A4Solution ansF = ModuleDiff.getSolution(f.toString());
 			if (ansF.satisfiable()) {
 				assertEquals(f.toString(), 0, size(ansF));
 				assertFalse(f.toString(), ans.next().satisfiable());
-			}			
-		}		
+			}
+		}
 	}
-	
+
 	private int size(A4Solution ans) {
 		int size = 0;
 		for (ExprVar v : ans.getAllAtoms()) {
-			size++;
+			Sig as = v.type().iterator().next().get(0);
+			if (as.isEnum == null && as.toString().startsWith("this")) {
+				size++;
+			}
 		}
 		return size;
 	}

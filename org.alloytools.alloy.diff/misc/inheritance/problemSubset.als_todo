@@ -3,7 +3,7 @@ sig A {
 }
 
 sig B in A {
-  b1 : set A
+  b1 : set A,
   b2 : set A
 }
 

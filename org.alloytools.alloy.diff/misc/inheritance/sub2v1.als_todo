@@ -1,0 +1,14 @@
+sig A {
+  a : some A
+}
+
+sig B in A {
+  b : some A
+}
+
+sig D in A {
+  c : some A,
+  d : some B
+}
+
+run {}
