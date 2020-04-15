@@ -16,12 +16,14 @@ import edu.mit.csail.sdg.translator.A4Solution;
 
 public class ModuleDiffTest {
 
-	String[] sigFolders = new String[] { "misc/enum/enum2.als", };
+	String[] sigFolders = new String[] { "misc/enum/enum1.als", };
 
 	@Test
 	public void diffSelfEmptyTest() throws Exception {
 		for (String folder : sigFolders) {
-			Files.find(Paths.get(folder), Integer.MAX_VALUE, (filePath, fileAttr) -> fileAttr.isRegularFile())
+			Files
+					.find(Paths.get(folder), Integer.MAX_VALUE,
+							(filePath, fileAttr) -> fileAttr.isRegularFile() && filePath.toString().endsWith(".als"))
 					.forEach(f -> diffSelfEmpty(f));
 		}
 	}
@@ -41,7 +43,9 @@ public class ModuleDiffTest {
 	@Test
 	public void diffEmptySelfTest() throws Exception {
 		for (String folder : sigFolders) {
-			Files.find(Paths.get(folder), Integer.MAX_VALUE, (filePath, fileAttr) -> fileAttr.isRegularFile())
+			Files
+					.find(Paths.get(folder), Integer.MAX_VALUE,
+							(filePath, fileAttr) -> fileAttr.isRegularFile() && filePath.toString().endsWith(".als"))
 					.forEach(f -> diffEmptySelf(f));
 		}
 	}

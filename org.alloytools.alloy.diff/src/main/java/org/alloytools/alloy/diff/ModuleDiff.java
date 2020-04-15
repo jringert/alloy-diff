@@ -24,6 +24,12 @@ public class ModuleDiff {
 
 	public static A4Options options = new A4Options();
 
+	/**
+	 * instances of rightFile that are not instances of left file
+	 * @param leftFile
+	 * @param rightFile
+	 * @return
+	 */
 	public static A4Solution diff(String leftFile, String rightFile) {
 
 		Module v1, v2;

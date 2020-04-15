@@ -36,8 +36,10 @@ public class ModuleMerger {
 	protected static Map<String, Sig> sigs;
 	protected static Map<String, Expr> v1SigExpr;
 	protected static Map<String, Expr> v1FieldExpr;
+	protected static InheritanceUtil v1iu;
 	protected static Map<String, Expr> v2SigExpr;
 	protected static Map<String, Expr> v2FieldExpr;
+	protected static InheritanceUtil v2iu;
 	protected static Expr c1;
 	protected static Expr c2;
 
@@ -53,8 +55,10 @@ public class ModuleMerger {
 		sigs = new HashMap<>();
 		v1SigExpr = new HashMap<>();
 		v1FieldExpr = new HashMap<>();
+		v1iu = new InheritanceUtil(v1);
 		v2SigExpr = new HashMap<>();
 		v2FieldExpr = new HashMap<>();
+		v2iu = new InheritanceUtil(v2);
 		Map<String, Sig> v1Sigs = new HashMap<>();
 		Map<String, Sig> v2Sigs = new HashMap<>();
 		c1 = ExprConstant.TRUE;
@@ -112,13 +116,13 @@ public class ModuleMerger {
 		}
 
 		// calculate signature expressions by union of self and subclasses
-		buildInheritanceSigExpr(v1, v1SigExpr);
-		buildInheritanceSigExpr(v2, v2SigExpr);
+		buildInheritanceSigExpr(v1, v1iu, v1SigExpr);
+		buildInheritanceSigExpr(v2, v2iu, v2SigExpr);
 
 		// calculate field expressions by union of fields with the same name of sub
 		// signatures
-		buildInheritanceFieldExpr(v1, v1FieldExpr);
-		buildInheritanceFieldExpr(v2, v2FieldExpr);
+		buildInheritanceFieldExpr(v1, v1iu, v1FieldExpr);
+		buildInheritanceFieldExpr(v2, v2iu, v2FieldExpr);
 
 		return sigs.values();
 	}
@@ -130,8 +134,7 @@ public class ModuleMerger {
 	 * @param m
 	 * @param fieldExpr
 	 */
-	private static void buildInheritanceFieldExpr(Module m, Map<String, Expr> fieldExpr) {
-		InheritanceUtil iu = new InheritanceUtil(m);
+	private static void buildInheritanceFieldExpr(Module m, InheritanceUtil iu, Map<String, Expr> fieldExpr) {		
 		for (Sig owner : iu.getParentSigs()) {
 			for (Field f : owner.getFields()) {
 				String id = owner.label + "." + f.label;
@@ -146,8 +149,7 @@ public class ModuleMerger {
 		}
 	}
 
-	private static void buildInheritanceSigExpr(Module m, Map<String, Expr> sigExpr) {
-		InheritanceUtil iu = new InheritanceUtil(m);
+	private static void buildInheritanceSigExpr(Module m, InheritanceUtil iu, Map<String, Expr> sigExpr) {		
 		for (Sig parent : m.getAllReachableUserDefinedSigs()) {
 			Set<Sig> mSubSigs = iu.getSubSigs(parent);
 			if (mSubSigs != null) {
@@ -169,19 +171,20 @@ public class ModuleMerger {
 	 */
 	private static Sig mergeSig(Sig s1, Sig s2) {
 		Sig s = new PrimSig(s1.label, getCommonSigAttributes(s1, s2));
-		c1 = generateSigAttributeConstraints(s, s1, c1);
-		c2 = generateSigAttributeConstraints(s, s2, c2);
+		c1 = generateSigAttributeConstraints(s, s1, v1iu, c1);
+		c2 = generateSigAttributeConstraints(s, s2, v2iu, c2);
 
 		return s;
 	}
 
 	/**
 	 *
-	 * FIXME: only works for fields of the same arity as a workaround fields with
+	 * TODO: only works for fields of the same arity as a workaround fields with
 	 * lower arity could be padded with a singleton signature. However, this would
 	 * require changing all expressions on fields.
 	 *
 	 * FIXME: messes up with field references inside field declarations; check this!
+	 * -- probably fine due to order in which fields are declared and due to restrictions in c1 and c2
 	 *
 	 * @param mergedSig
 	 * @param fields1
@@ -401,6 +404,7 @@ public class ModuleMerger {
 		return fun2;
 	}
 
+	@SuppressWarnings("unused")
 	private static Type replaceSigRefs(Type t) {
 		for (ProductType pt : t) {
 			if (pt.arity() != 1) {
@@ -423,19 +427,14 @@ public class ModuleMerger {
 	private static Sig getInternalSig(String label) {
 		switch (label) {
 		case "univ":
-//			sigs.put(label, Sig.UNIV);
 			return Sig.UNIV;
 		case "Int":
-//			sigs.put(label, Sig.SIGINT);
 			return Sig.SIGINT;
 		case "seq/Int":
-//			sigs.put(label, Sig.SEQIDX);
 			return Sig.SEQIDX;
 		case "String":
-//			sigs.put(label, Sig.STRING);
 			return Sig.STRING;
 		case "none":
-//			sigs.put(label, Sig.NONE);
 			return Sig.NONE;
 		default:
 			return null;
@@ -489,7 +488,7 @@ public class ModuleMerger {
 	}
 
 	/**
-	 * FIXME Should implement the table!
+	 * Computes least upper bound of two operators
 	 *
 	 * @param op
 	 * @param op2
@@ -557,10 +556,12 @@ public class ModuleMerger {
 	 * @param c
 	 * @return
 	 */
-	private static Expr generateSigAttributeConstraints(Sig s, Sig old, Expr c) {
+	private static Expr generateSigAttributeConstraints(Sig s, Sig old, InheritanceUtil iu, Expr c) {
 		if (old.isAbstract != null && s.isAbstract == null) {
-			// without inheritence, abstract has no impact
-			// c = c.and(s.no());
+			// without inheritance, abstract has no impact
+			if (iu.getSubSigs(old) != null) {
+				c = c.and(s.no());				
+			}
 		}
 
 		if (old.isLone != null && s.isLone == null) {

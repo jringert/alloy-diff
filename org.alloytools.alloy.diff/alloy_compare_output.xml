@@ -11,20 +11,31 @@
 <sig label="String" ID="3" parentID="2" builtin="yes">
 </sig>
 
-<sig label="this/Bank" ID="4" parentID="2" lone="yes">
-   <atom label="Bank$0"/>
+<sig label="this/b" ID="4" parentID="2" one="yes">
+   <atom label="b$0"/>
 </sig>
 
-<field label="branches" ID="5" parentID="4">
-   <tuple> <atom label="Bank$0"/> <atom label="Branch$0"/> </tuple>
-   <tuple> <atom label="Bank$0"/> <atom label="Branch$1"/> </tuple>
-   <types> <type ID="4"/> <type ID="6"/> </types>
+<sig label="this/A" ID="5" parentID="2" abstract="yes" enum="yes">
+</sig>
+
+<sig label="this/a" ID="6" parentID="2" one="yes">
+   <atom label="a$0"/>
+</sig>
+
+<sig label="this/C" ID="7" parentID="2">
+</sig>
+
+<sig label="ordering/Ord" ID="8" parentID="2" one="yes" private="yes">
+   <atom label="ordering/Ord$0"/>
+</sig>
+
+<field label="First" ID="9" parentID="8" private="yes">
+   <types> <type ID="8"/> <type ID="5"/> </types>
 </field>
 
-<sig label="this/Branch" ID="6" parentID="2">
-   <atom label="Branch$0"/>
-   <atom label="Branch$1"/>
-</sig>
+<field label="Next" ID="10" parentID="8" private="yes">
+   <types> <type ID="8"/> <type ID="5"/> <type ID="5"/> </types>
+</field>
 
 <sig label="univ" ID="2" builtin="yes">
 </sig>
