@@ -16,7 +16,7 @@ import edu.mit.csail.sdg.translator.A4Solution;
 
 public class ModuleDiffTest {
 
-	String[] sigFolders = new String[] { "misc/enum/enum1.als", };
+	String[] sigFolders = new String[] { "misc", };
 
 	@Test
 	public void diffSelfEmptyTest() throws Exception {

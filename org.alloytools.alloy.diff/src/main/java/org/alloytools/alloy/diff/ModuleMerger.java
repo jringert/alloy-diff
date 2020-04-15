@@ -80,10 +80,17 @@ public class ModuleMerger {
 					sigs.put(sName, mergeSig(v1Sigs.get(sName), v2Sigs.get(sName)));
 				}
 			} else {
+				Sig old = v1Sigs.get(sName);
 				// adding signatures that are unique in v1
-				if (v1Sigs.get(sName) instanceof PrimSig) {
-					Sig s = new PrimSig(sName, v1Sigs.get(sName).attributes.toArray(new Attr[] {}));
+				if (old instanceof PrimSig) {
+					Sig s = null;
+					if (old.isLone != null|| old.isOne != null) {
+						s = new PrimSig(sName, Attr.LONE);
+					} else {
+						s = new PrimSig(sName);
+					}
 					sigs.put(sName, s);
+					c1 = generateSigAttributeConstraints(s, old, v1iu, c1);
 					// closed world
 					c2 = c2.and(s.no());
 				}
@@ -91,15 +98,26 @@ public class ModuleMerger {
 		}
 		for (String sName : v2Sigs.keySet()) {
 			if (!v1Sigs.containsKey(sName)) {
+				Sig old = v2Sigs.get(sName); 
 				// adding signatures that are unique in v2
-				if (v2Sigs.get(sName) instanceof PrimSig) {
-					Sig s = new PrimSig(sName, v2Sigs.get(sName).attributes.toArray(new Attr[] {}));
+				if (old instanceof PrimSig) {
+					Sig s = null;
+					if (old.isLone != null|| old.isOne != null) {
+						s = new PrimSig(sName, Attr.LONE);
+					} else {
+						s = new PrimSig(sName);
+					}
 					sigs.put(sName, s);
+					c2 = generateSigAttributeConstraints(s, old, v2iu, c2);
 					// closed world
 					c1 = c1.and(s.no());
 				}
 			}
 		}
+
+		// calculate signature expressions by union of self and subclasses
+		buildInheritanceSigExpr(v1, v1iu, v1SigExpr);
+		buildInheritanceSigExpr(v2, v2iu, v2SigExpr);
 
 		for (String sName : sigs.keySet()) {
 			Sig s = sigs.get(sName);
@@ -114,10 +132,6 @@ public class ModuleMerger {
 				addFields(s, s2.getFields(), false);
 			}
 		}
-
-		// calculate signature expressions by union of self and subclasses
-		buildInheritanceSigExpr(v1, v1iu, v1SigExpr);
-		buildInheritanceSigExpr(v2, v2iu, v2SigExpr);
 
 		// calculate field expressions by union of fields with the same name of sub
 		// signatures
@@ -153,7 +167,7 @@ public class ModuleMerger {
 		for (Sig parent : m.getAllReachableUserDefinedSigs()) {
 			Set<Sig> mSubSigs = iu.getSubSigs(parent);
 			if (mSubSigs != null) {
-				Expr union = parent;
+				Expr union = sigs.get(parent.label);
 				for (Sig s : mSubSigs) {
 					union = union.plus(sigs.get(s.label));
 				}
