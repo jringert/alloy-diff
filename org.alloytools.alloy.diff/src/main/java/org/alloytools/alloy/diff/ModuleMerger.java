@@ -18,6 +18,8 @@ import edu.mit.csail.sdg.ast.ExprBinary;
 import edu.mit.csail.sdg.ast.ExprCall;
 import edu.mit.csail.sdg.ast.ExprConstant;
 import edu.mit.csail.sdg.ast.ExprHasName;
+import edu.mit.csail.sdg.ast.ExprITE;
+import edu.mit.csail.sdg.ast.ExprLet;
 import edu.mit.csail.sdg.ast.ExprList;
 import edu.mit.csail.sdg.ast.ExprList.Op;
 import edu.mit.csail.sdg.ast.ExprQt;
@@ -84,7 +86,7 @@ public class ModuleMerger {
 				// adding signatures that are unique in v1
 				if (old instanceof PrimSig) {
 					Sig s = null;
-					if (old.isLone != null|| old.isOne != null) {
+					if (old.isLone != null || old.isOne != null) {
 						s = new PrimSig(sName, Attr.LONE);
 					} else {
 						s = new PrimSig(sName);
@@ -98,11 +100,11 @@ public class ModuleMerger {
 		}
 		for (String sName : v2Sigs.keySet()) {
 			if (!v1Sigs.containsKey(sName)) {
-				Sig old = v2Sigs.get(sName); 
+				Sig old = v2Sigs.get(sName);
 				// adding signatures that are unique in v2
 				if (old instanceof PrimSig) {
 					Sig s = null;
-					if (old.isLone != null|| old.isOne != null) {
+					if (old.isLone != null || old.isOne != null) {
 						s = new PrimSig(sName, Attr.LONE);
 					} else {
 						s = new PrimSig(sName);
@@ -121,15 +123,15 @@ public class ModuleMerger {
 
 		for (String sName : sigs.keySet()) {
 			Sig s = sigs.get(sName);
-
+			// TODO check what happens to subsignatures
 			Sig s1 = v1Sigs.get(sName);
 			Sig s2 = v2Sigs.get(sName);
 			if (s1 != null && s2 != null) {
-				mergeFields(s, s1.getFields(), s2.getFields());
+				mergeFields(s, v1iu.getAllFields(s1), v2iu.getAllFields(s2));
 			} else if (s1 != null) {
-				addFields(s, s1.getFields(), true);
+				addFields(s, v1iu.getAllFields(s1), true);
 			} else {
-				addFields(s, s2.getFields(), false);
+				addFields(s, v2iu.getAllFields(s2), false);
 			}
 		}
 
@@ -148,7 +150,7 @@ public class ModuleMerger {
 	 * @param m
 	 * @param fieldExpr
 	 */
-	private static void buildInheritanceFieldExpr(Module m, InheritanceUtil iu, Map<String, Expr> fieldExpr) {		
+	private static void buildInheritanceFieldExpr(Module m, InheritanceUtil iu, Map<String, Expr> fieldExpr) {
 		for (Sig owner : iu.getParentSigs()) {
 			for (Field f : owner.getFields()) {
 				String id = owner.label + "." + f.label;
@@ -163,7 +165,7 @@ public class ModuleMerger {
 		}
 	}
 
-	private static void buildInheritanceSigExpr(Module m, InheritanceUtil iu, Map<String, Expr> sigExpr) {		
+	private static void buildInheritanceSigExpr(Module m, InheritanceUtil iu, Map<String, Expr> sigExpr) {
 		for (Sig parent : m.getAllReachableUserDefinedSigs()) {
 			Set<Sig> mSubSigs = iu.getSubSigs(parent);
 			if (mSubSigs != null) {
@@ -198,13 +200,14 @@ public class ModuleMerger {
 	 * require changing all expressions on fields.
 	 *
 	 * FIXME: messes up with field references inside field declarations; check this!
-	 * -- probably fine due to order in which fields are declared and due to restrictions in c1 and c2
+	 * -- probably fine due to order in which fields are declared and due to
+	 * restrictions in c1 and c2
 	 *
 	 * @param mergedSig
 	 * @param fields1
 	 * @param fields2
 	 */
-	private static void mergeFields(Sig mergedSig, SafeList<Field> fields1, SafeList<Field> fields2) {
+	private static void mergeFields(Sig mergedSig, Set<Field> fields1, Set<Field> fields2) {
 		Set<Field> unique1 = new HashSet<Sig.Field>();
 		Set<Field> unique2 = new HashSet<Sig.Field>();
 
@@ -262,7 +265,7 @@ public class ModuleMerger {
 		}
 	}
 
-	private static void addFields(Sig s, SafeList<Field> fields, boolean inV1) {
+	private static void addFields(Sig s, Set<Field> fields, boolean inV1) {
 		for (Field f : fields) {
 			s.addField(f.label, replaceSigRefs(f.decl().expr, inV1));
 		}
@@ -361,10 +364,10 @@ public class ModuleMerger {
 			return ExprList.make(el.pos, el.closingBracket, Op.AND, l);
 		case "ExprQt":
 			ExprQt eq = (ExprQt) expr;
-			List<Decl> decls = new ArrayList<Decl>();
+			List<Decl> decls = new ArrayList<Decl>(names);
 			for (Decl d : eq.decls) {
 				decls.add(new Decl(d.isPrivate, d.disjoint, d.disjoint2, replaceSigRefs(d.names, inV1),
-						replaceSigRefs(d.expr, names, inV1)));
+						replaceSigRefs(d.expr, decls, inV1)));
 			}
 			return eq.op.make(eq.pos, eq.closingBracket, decls, replaceSigRefs(eq.sub, decls, inV1));
 		case "ExprVar":
@@ -377,6 +380,8 @@ public class ModuleMerger {
 				}
 			}
 			Type t = ev.type();
+			// FIXME figure out how to correctly use the this reference in signatures where
+			// one field references the ohter
 			ExprVar ret = ExprVar.make(ev.pos, ev.label, replaceSigRefs(t));
 			return ret;
 		case "Field":
@@ -398,8 +403,22 @@ public class ModuleMerger {
 			for (Expr c : ec.args) {
 				args.add(replaceSigRefs(c, names, inV1));
 			}
+			// FIXME pass names as parameter?
 			Expr nec = ExprCall.make(ec.pos, ec.closingBracket, replaceSigRefs(ec.fun, inV1), args, 0);
 			return nec;
+		case "ExprLet":
+			ExprLet let = (ExprLet) expr;
+			ExprVar evar = (ExprVar) replaceSigRefs(let.var, inV1);
+
+			List<ExprHasName> letNames = new ArrayList<>();
+			letNames.add(evar);
+			Decl d = new Decl(null, null, null, letNames, evar);
+			names = new ArrayList<>(names);
+			names.add(d);
+			return ExprLet.make(let.pos, evar, replaceSigRefs(let.expr, names, inV1), replaceSigRefs(let.sub, names, inV1));
+		case "ExprITE":
+			ExprITE ite = (ExprITE) expr;
+			return ExprITE.make(ite.pos, replaceSigRefs(ite.cond, names, inV1), replaceSigRefs(ite.left, names, inV1), replaceSigRefs(ite.right, names, inV1));
 		default:
 			System.out.println(expr.getClass().getSimpleName());
 			throw new RuntimeException(
@@ -418,12 +437,9 @@ public class ModuleMerger {
 		return fun2;
 	}
 
-	@SuppressWarnings("unused")
 	private static Type replaceSigRefs(Type t) {
 		for (ProductType pt : t) {
-			if (pt.arity() != 1) {
-				throw new RuntimeException("Ecountered type with arity != 1");
-			}
+			Type product = null;
 			for (int i = 0; i < pt.arity(); i++) {
 				Sig s = sigs.get(pt.get(i).label);
 				if (s == null) {
@@ -432,8 +448,13 @@ public class ModuleMerger {
 						throw new RuntimeException("Signature " + pt.get(i).label + " not found in merged signature map.");
 					}
 				}
-				return s.type();
+				if (product == null) {
+					product = s.type();
+				} else {
+					product = product.product(s.type());
+				}
 			}
+			return product;
 		}
 		throw new RuntimeException("Unhandled case at end of replaceSigRefs(Type t)");
 	}
@@ -574,7 +595,7 @@ public class ModuleMerger {
 		if (old.isAbstract != null && s.isAbstract == null) {
 			// without inheritance, abstract has no impact
 			if (iu.getSubSigs(old) != null) {
-				c = c.and(s.no());				
+				c = c.and(s.no());
 			}
 		}
 

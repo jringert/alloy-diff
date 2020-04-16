@@ -12,11 +12,12 @@ import org.junit.Test;
 
 import edu.mit.csail.sdg.ast.ExprVar;
 import edu.mit.csail.sdg.ast.Sig;
+import edu.mit.csail.sdg.parser.CompUtil;
 import edu.mit.csail.sdg.translator.A4Solution;
 
 public class ModuleDiffTest {
 
-	String[] sigFolders = new String[] { "misc", };
+	String[] sigFolders = new String[] { "misc", "../models-master/" };
 
 	@Test
 	public void diffSelfEmptyTest() throws Exception {
@@ -36,6 +37,7 @@ public class ModuleDiffTest {
 	 * @param f
 	 */
 	private void diffSelfEmpty(Path f) {
+		System.out.println("diff " + f.toString() + " and empty.als");
 		A4Solution ans = ModuleDiff.diff(f.toString(), "misc/empty.als");
 		assertTrue(f.toString() + " had a satisfiable diff with empty module", !ans.satisfiable() || size(ans) == 0);
 	}
@@ -58,13 +60,14 @@ public class ModuleDiffTest {
 	 * @param f
 	 */
 	private void diffEmptySelf(Path f) {
+		System.out.println("diff empty.als and " + f.toString());
 		A4Solution ans = ModuleDiff.diff("misc/empty.als", f.toString());
-
+		
 		if (ans.satisfiable()) {
 			assertTrue("Empty module had an empty diff with " + f.toString(), size(ans) > 0);
 		} else {
 			A4Solution ansF = ModuleDiff.getSolution(f.toString());
-			if (ansF.satisfiable()) {
+			if (ansF.satisfiable() && !CompUtil.parseEverything_fromFile(null, null, f.toString()).getAllCommands().get(0).check) {
 				assertEquals(f.toString(), 0, size(ansF));
 				assertFalse(f.toString(), ans.next().satisfiable());
 			}
@@ -80,5 +83,32 @@ public class ModuleDiffTest {
 			}
 		}
 		return size;
+	}
+	
+	@Test
+	public void diffExtends12() {
+		A4Solution ans = ModuleDiff.diff("misc/inheritance/extends1v1.als", "misc/inheritance/extends1v2.als");
+		assertFalse(ans.satisfiable());
+
+		ans = ModuleDiff.diff("misc/inheritance/extends1v2.als", "misc/inheritance/extends1v1.als");
+		assertFalse(ans.satisfiable());
+	}
+	
+	@Test
+	public void diffExtends13() {
+		A4Solution ans = ModuleDiff.diff("misc/inheritance/extends1v1.als", "misc/inheritance/extends1v3.als");
+		assertTrue(ans.satisfiable());
+
+		ans = ModuleDiff.diff("misc/inheritance/extends1v3.als", "misc/inheritance/extends1v1.als");
+		assertTrue(ans.satisfiable());
+	}
+	
+	@Test
+	public void diffExtends23() {
+		A4Solution ans = ModuleDiff.diff("misc/inheritance/extends1v2.als", "misc/inheritance/extends1v3.als");
+		assertTrue(ans.satisfiable());
+
+		ans = ModuleDiff.diff("misc/inheritance/extends1v3.als", "misc/inheritance/extends1v2.als");
+		assertTrue(ans.satisfiable());
 	}
 }
