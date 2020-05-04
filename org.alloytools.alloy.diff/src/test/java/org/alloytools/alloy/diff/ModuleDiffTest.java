@@ -7,27 +7,24 @@ import static org.junit.Assert.assertTrue;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.stream.Stream;
 
 import org.junit.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import edu.mit.csail.sdg.alloy4.ErrorType;
 import edu.mit.csail.sdg.ast.ExprVar;
 import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.parser.CompUtil;
 import edu.mit.csail.sdg.translator.A4Solution;
 
-public class ModuleDiffTest {
-
-	String[] sigFolders = new String[] { "misc", "../models-master/" };
-
-	@Test
-	public void diffSelfEmptyTest() throws Exception {
-		for (String folder : sigFolders) {
-			Files
-					.find(Paths.get(folder), Integer.MAX_VALUE,
-							(filePath, fileAttr) -> fileAttr.isRegularFile() && filePath.toString().endsWith(".als"))
-					.forEach(f -> diffSelfEmpty(f));
-		}
-	}
+public class ModuleDiffTest {	
+	
+	static String[] sigFolders = new String[] { "misc", "../models-master", "../iAlloy-dataset-master" };
+//	static String[] sigFolders = new String[] { "misc/quantification/q2.als" };
+//	static String[] sigFolders = new String[] { "../models-master/puzzles/einstein/einstein-wikipedia.als"};
 
 	/**
 	 * Checks whether the empty module has instances that the current one doesn't.
@@ -36,20 +33,36 @@ public class ModuleDiffTest {
 	 * 
 	 * @param f
 	 */
-	private void diffSelfEmpty(Path f) {
+	@ParameterizedTest
+	@MethodSource("allAlloyFiles")
+	public void diffSelfEmpty(Path f) {
 		System.out.println("diff " + f.toString() + " and empty.als");
-		A4Solution ans = ModuleDiff.diff(f.toString(), "misc/empty.als");
-		assertTrue(f.toString() + " had a satisfiable diff with empty module", !ans.satisfiable() || size(ans) == 0);
+		try {
+			A4Solution ans = ModuleDiff.diff(f.toString(), "misc/empty.als");
+			assertTrue(f.toString() + " had a satisfiable diff with empty module", !ans.satisfiable() || size(ans) == 0);
+		} catch (ErrorType e) {
+			if (e.getMessage().contains("higher-order")) {
+				System.out.println(e.getMessage());
+			} else {
+				throw e;
+			}
+		}
 	}
 
-	@Test
-	public void diffEmptySelfTest() throws Exception {
+	public static Stream<Arguments> allAlloyFiles() throws Exception {
+		Stream<Arguments> allFiles = null;
 		for (String folder : sigFolders) {
+			Stream<Arguments> inThisFolder = 
 			Files
 					.find(Paths.get(folder), Integer.MAX_VALUE,
-							(filePath, fileAttr) -> fileAttr.isRegularFile() && filePath.toString().endsWith(".als"))
-					.forEach(f -> diffEmptySelf(f));
+							(filePath, fileAttr) -> fileAttr.isRegularFile() && filePath.toString().endsWith(".als")).map(f -> Arguments.of(f));
+			if (allFiles == null) {
+				allFiles = inThisFolder;
+			} else {
+				allFiles = Stream.concat(allFiles, inThisFolder);
+			}
 		}
+		return allFiles;
 	}
 
 	/**
@@ -59,7 +72,9 @@ public class ModuleDiffTest {
 	 * 
 	 * @param f
 	 */
-	private void diffEmptySelf(Path f) {
+	@ParameterizedTest
+	@MethodSource("allAlloyFiles")
+	public void diffEmptySelf(Path f) {
 		System.out.println("diff empty.als and " + f.toString());
 		A4Solution ans = ModuleDiff.diff("misc/empty.als", f.toString());
 		

@@ -7,8 +7,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import edu.mit.csail.sdg.ast.Module;
 import edu.mit.csail.sdg.parser.CompUtil;
@@ -17,34 +20,29 @@ import edu.mit.csail.sdg.translator.A4Solution;
 import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 
 class CheckSolutionTest {
-	
-	@Test
-	public void ckeckSelfSolutionSimpleTest() throws Exception {
-//		checkSolutionSelf(Paths.get("../org.alloytools.alloy.diff/misc/string/string2.als"));
-//		checkSolutionSelf(Paths.get("../models-master/ietf-rfcs/rfc7617-BasicAuth/basic-auth.als"));
-//		checkSolutionSelf(Paths.get("..\\models-master\\simple-models\\state-machine\\flip-flop.als"));
-		
+
+	static String[] sigFolders = new String[] { "../org.alloytools.alloy.diff/misc", "../org.alloytools.alloy.extra/extra/models/examples", "../models-master", "../iAlloy-dataset-master" };
+
+	public static Stream<Arguments> allAlloyFiles() throws Exception {
+		Stream<Arguments> allFiles = null;
+		for (String folder : sigFolders) {
+			Stream<Arguments> inThisFolder = 
+			Files
+					.find(Paths.get(folder), Integer.MAX_VALUE,
+							(filePath, fileAttr) -> fileAttr.isRegularFile() && filePath.toString().endsWith(".als")).map(f -> Arguments.of(f));
+			if (allFiles == null) {
+				allFiles = inThisFolder;
+			} else {
+				allFiles = Stream.concat(allFiles, inThisFolder);
+			}
+		}
+		return allFiles;
 	}
 
-	@Test
-	public void ckeckSelfSolutionTest() throws Exception {
-		Files.find(Paths.get("../org.alloytools.alloy.diff/misc"), Integer.MAX_VALUE,
-				(filePath, fileAttr) -> fileAttr.isRegularFile()).forEach(f -> checkSolutionSelf(f));
-	}
 
-	@Test
-	public void ckeckSelfSolutionAllAlloyTest() throws Exception {
-		Files.find(Paths.get("../org.alloytools.alloy.extra/extra/models/examples"), Integer.MAX_VALUE,
-				(filePath, fileAttr) -> fileAttr.isRegularFile()).forEach(f -> checkSolutionSelf(f));
-	}
-
-	@Test
-	public void ckeckSelfSolutionAllAlloyModelsMasterTest() throws Exception {
-		Files.find(Paths.get("../models-master"), Integer.MAX_VALUE,
-				(filePath, fileAttr) -> fileAttr.isRegularFile()).forEach(f -> checkSolutionSelf(f));
-	}
-
-	private void checkSolutionSelf(Path f) {
+	@ParameterizedTest
+	@MethodSource("allAlloyFiles")
+	public void checkSolutionSelf(Path f) {
 		if (!f.toString().endsWith(".als")) {
 			return;
 		}

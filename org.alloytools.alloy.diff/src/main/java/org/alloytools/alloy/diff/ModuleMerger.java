@@ -4,12 +4,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import edu.mit.csail.sdg.alloy4.ConstList;
-import edu.mit.csail.sdg.alloy4.SafeList;
 import edu.mit.csail.sdg.ast.Attr;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Decl;
@@ -35,14 +35,45 @@ import edu.mit.csail.sdg.ast.Type.ProductType;
 
 public class ModuleMerger {
 
+	/**
+	 * merged signatures
+	 */
 	protected static Map<String, Sig> sigs;
+	/**
+	 * optional, merged signature expressions for signatures from v1 (to simulate
+	 * inheritance)
+	 */
 	protected static Map<String, Expr> v1SigExpr;
+	/**
+	 * optional, merged field expressions for signatures from v1 (to simulate
+	 * inheritance)
+	 */
 	protected static Map<String, Expr> v1FieldExpr;
+	/**
+	 * inheritance information of v1 (not merged; on original signatures)
+	 */
 	protected static InheritanceUtil v1iu;
+	/**
+	 * optional, merged signature expressions for signatures from v2 (to simulate
+	 * inheritance)
+	 */
 	protected static Map<String, Expr> v2SigExpr;
+	/**
+	 * optional, merged field expressions for signatures from v2 (to simulate
+	 * inheritance)
+	 */
 	protected static Map<String, Expr> v2FieldExpr;
+	/**
+	 * inheritance information of v2 (not merged; on original signatures)
+	 */
 	protected static InheritanceUtil v2iu;
+	/**
+	 * constraints to ensure instances of v1 on merged signatures
+	 */
 	protected static Expr c1;
+	/**
+	 * constraints to ensure instances of v2 on merged signatures
+	 */
 	protected static Expr c2;
 
 	/**
@@ -54,15 +85,18 @@ public class ModuleMerger {
 	 * @return
 	 */
 	public static Collection<Sig> mergeSigs(Module v1, Module v2) {
-		sigs = new HashMap<>();
-		v1SigExpr = new HashMap<>();
-		v1FieldExpr = new HashMap<>();
+		/**
+		 * merged signatures
+		 */
+		sigs = new LinkedHashMap<>();
+		v1SigExpr = new LinkedHashMap<>();
+		v1FieldExpr = new LinkedHashMap<>();
 		v1iu = new InheritanceUtil(v1);
-		v2SigExpr = new HashMap<>();
-		v2FieldExpr = new HashMap<>();
+		v2SigExpr = new LinkedHashMap<>();
+		v2FieldExpr = new LinkedHashMap<>();
 		v2iu = new InheritanceUtil(v2);
-		Map<String, Sig> v1Sigs = new HashMap<>();
-		Map<String, Sig> v2Sigs = new HashMap<>();
+		Map<String, Sig> v1Sigs = new LinkedHashMap<>();
+		Map<String, Sig> v2Sigs = new LinkedHashMap<>();
 		c1 = ExprConstant.TRUE;
 		c2 = ExprConstant.TRUE;
 
@@ -123,6 +157,7 @@ public class ModuleMerger {
 
 		for (String sName : sigs.keySet()) {
 			Sig s = sigs.get(sName);
+			System.out.println(s.label);
 			// TODO check what happens to subsignatures
 			Sig s1 = v1Sigs.get(sName);
 			Sig s2 = v2Sigs.get(sName);
@@ -199,7 +234,7 @@ public class ModuleMerger {
 	 * lower arity could be padded with a singleton signature. However, this would
 	 * require changing all expressions on fields.
 	 *
-	 * FIXME: messes up with field references inside field declarations; check this!
+	 * TODO: messes up with field references inside field declarations; check this!
 	 * -- probably fine due to order in which fields are declared and due to
 	 * restrictions in c1 and c2
 	 *
@@ -333,11 +368,11 @@ public class ModuleMerger {
 		switch (expr.getClass().getSimpleName()) {
 		case "ExprUnary":
 			ExprUnary ue = (ExprUnary) expr;
-			return ue.op.make(ue.pos, replaceSigRefs(ue.sub, names, inV1));
+			return ue.op.make(ue.pos, replaceSigRefs(ue.sub, List.copyOf(names), inV1));
 		case "ExprBinary":
 			ExprBinary be = (ExprBinary) expr;
-			return be.op.make(be.pos, be.closingBracket, replaceSigRefs(be.left, names, inV1),
-					replaceSigRefs(be.right, names, inV1));
+			return be.op.make(be.pos, be.closingBracket, replaceSigRefs(be.left, List.copyOf(names), inV1),
+					replaceSigRefs(be.right, List.copyOf(names), inV1));
 		case "PrimSig":
 			PrimSig ps = (PrimSig) expr;
 			// expressions taking care of inheritance override normal signatures
@@ -359,17 +394,20 @@ public class ModuleMerger {
 			ExprList el = (ExprList) expr;
 			List<Expr> l = new ArrayList<Expr>();
 			for (Expr e : el.args) {
-				l.add(replaceSigRefs(e, names, inV1));
+				l.add(replaceSigRefs(e, List.copyOf(names), inV1));
 			}
 			return ExprList.make(el.pos, el.closingBracket, Op.AND, l);
 		case "ExprQt":
 			ExprQt eq = (ExprQt) expr;
-			List<Decl> decls = new ArrayList<Decl>(names);
+			List<Decl> allDecls = new ArrayList<Decl>(names);
+			List<Decl> qtDecls = new ArrayList<Decl>();
 			for (Decl d : eq.decls) {
-				decls.add(new Decl(d.isPrivate, d.disjoint, d.disjoint2, replaceSigRefs(d.names, inV1),
-						replaceSigRefs(d.expr, decls, inV1)));
+				Decl newD = new Decl(d.isPrivate, d.disjoint, d.disjoint2, replaceSigRefs(d.names, inV1),
+						replaceSigRefs(d.expr, allDecls, inV1));
+				qtDecls.add(newD);
+				allDecls.add(newD);
 			}
-			return eq.op.make(eq.pos, eq.closingBracket, decls, replaceSigRefs(eq.sub, decls, inV1));
+			return eq.op.make(eq.pos, eq.closingBracket, qtDecls, replaceSigRefs(eq.sub, allDecls, inV1));
 		case "ExprVar":
 			ExprVar ev = (ExprVar) expr;
 			for (Decl d : names) {
@@ -382,6 +420,9 @@ public class ModuleMerger {
 			Type t = ev.type();
 			// FIXME figure out how to correctly use the this reference in signatures where
 			// one field references the ohter
+			if (ev.label.equals("this")) {
+				return getExprVarToSig(ev);
+			}
 			ExprVar ret = ExprVar.make(ev.pos, ev.label, replaceSigRefs(t));
 			return ret;
 		case "Field":
@@ -394,7 +435,11 @@ public class ModuleMerger {
 				return v2FieldExpr.get(key);
 			}
 			// return reference to merged field
-			return getField(sigs.get(f.sig.label), f.label);
+			Expr res = getField(sigs.get(f.sig.label), f.label);
+			if (res == null) {
+				throw new RuntimeException("Could not find merged field " + f.label);
+			}
+			return res;
 		case "ExprConstant":
 			return expr;
 		case "ExprCall":
@@ -418,13 +463,15 @@ public class ModuleMerger {
 			return ExprLet.make(let.pos, evar, replaceSigRefs(let.expr, names, inV1), replaceSigRefs(let.sub, names, inV1));
 		case "ExprITE":
 			ExprITE ite = (ExprITE) expr;
-			return ExprITE.make(ite.pos, replaceSigRefs(ite.cond, names, inV1), replaceSigRefs(ite.left, names, inV1), replaceSigRefs(ite.right, names, inV1));
+			return ExprITE.make(ite.pos, replaceSigRefs(ite.cond, List.copyOf(names), inV1),
+					replaceSigRefs(ite.left, List.copyOf(names), inV1), replaceSigRefs(ite.right, List.copyOf(names), inV1));
 		default:
 			System.out.println(expr.getClass().getSimpleName());
 			throw new RuntimeException(
 					"Error in replaceSigRefs for: " + expr.getClass().getSimpleName() + "\nat " + expr.pos);
 		}
 	}
+
 
 	private static Func replaceSigRefs(Func fun, boolean inV1) {
 		List<Decl> decls = new ArrayList<Decl>();
@@ -435,6 +482,22 @@ public class ModuleMerger {
 		Func fun2 = new Func(fun.pos, fun.label, decls, replaceSigRefs(fun.returnDecl, decls, inV1),
 				replaceSigRefs(fun.getBody(), decls, inV1));
 		return fun2;
+	}
+
+	private static ExprVar getExprVarToSig(ExprVar ev) {
+		ProductType pt = ev.type().iterator().next();
+		if (pt.arity() > 1) {
+			throw new RuntimeException("Arity > 1 when resolving a \"this\" expression");
+		}
+		Sig s = sigs.get(pt.get(0).label);
+		if (s == null) {
+			s = getInternalSig(pt.get(0).label);
+			if (s == null) {
+				throw new RuntimeException("Signature " + pt.get(0).label + " not found in merged signature map.");
+			}
+		}
+
+		return (ExprVar) s.decl.get();
 	}
 
 	private static Type replaceSigRefs(Type t) {
@@ -455,6 +518,9 @@ public class ModuleMerger {
 				}
 			}
 			return product;
+		}
+		if (t.is_bool) {
+			return Type.FORMULA;
 		}
 		throw new RuntimeException("Unhandled case at end of replaceSigRefs(Type t)");
 	}
