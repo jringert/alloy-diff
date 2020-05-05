@@ -2,8 +2,7 @@ package org.alloytools.alloy.diff;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -157,7 +156,6 @@ public class ModuleMerger {
 
 		for (String sName : sigs.keySet()) {
 			Sig s = sigs.get(sName);
-			System.out.println(s.label);
 			// TODO check what happens to subsignatures
 			Sig s1 = v1Sigs.get(sName);
 			Sig s2 = v2Sigs.get(sName);
@@ -243,8 +241,8 @@ public class ModuleMerger {
 	 * @param fields2
 	 */
 	private static void mergeFields(Sig mergedSig, Set<Field> fields1, Set<Field> fields2) {
-		Set<Field> unique1 = new HashSet<Sig.Field>();
-		Set<Field> unique2 = new HashSet<Sig.Field>();
+		Set<Field> unique1 = new LinkedHashSet<Sig.Field>();
+		Set<Field> unique2 = new LinkedHashSet<Sig.Field>();
 
 		for (Field f1 : fields1) {
 			unique1.add(f1);
