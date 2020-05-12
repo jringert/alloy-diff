@@ -1,0 +1,10 @@
+#!/bin/bash
+for f1 in *.als; do
+    for f2 in *.als; do
+        if [ ${f1##*/} != ${f2##*/} ]; then
+            if cmp -s "$f1" "$f2"; then
+                echo "$f1 and $f2 are same"
+            fi
+        fi
+    done
+done

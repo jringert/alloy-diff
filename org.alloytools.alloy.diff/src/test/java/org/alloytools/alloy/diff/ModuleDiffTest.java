@@ -22,8 +22,8 @@ import edu.mit.csail.sdg.translator.A4Solution;
 
 public class ModuleDiffTest {	
 	
-//	static String[] sigFolders = new String[] { "misc", "../models-master", "../iAlloy-dataset-master" };
-	static String[] sigFolders = new String[] { "misc/fields/fields2.als" };
+	static String[] sigFolders = new String[] { "misc", "../models-master", "../iAlloy-dataset-master", "../platinum-experiment-data/" };
+//	static String[] sigFolders = new String[] { "misc/fields/fields2.als" };
 //	static String[] sigFolders = new String[] { "misc/quantification/q2.als" };
 //	static String[] sigFolders = new String[] { "../models-master/puzzles/einstein/einstein-wikipedia.als"};
 
@@ -125,6 +125,15 @@ public class ModuleDiffTest {
 		assertTrue(ans.satisfiable());
 
 		ans = ModuleDiff.diff("misc/inheritance/extends1v3.als", "misc/inheritance/extends1v2.als");
+		assertTrue(ans.satisfiable());
+	}
+	
+	@Test
+	public void diffFacts12() {
+		A4Solution ans = ModuleDiff.diff("misc/facts/factV1.als", "misc/facts/factV2.als");
+		assertFalse(ans.satisfiable());
+
+		ans = ModuleDiff.diff("misc/facts/factV2.als", "misc/facts/factV1.als");
 		assertTrue(ans.satisfiable());
 	}
 }
