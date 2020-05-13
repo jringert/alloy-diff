@@ -11,6 +11,7 @@ import java.util.Set;
 import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.ast.Attr;
 import edu.mit.csail.sdg.ast.Command;
+import edu.mit.csail.sdg.ast.CommandScope;
 import edu.mit.csail.sdg.ast.Decl;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.ExprBinary;
@@ -175,7 +176,7 @@ public class ModuleMerger {
 
 		addSignatureFacts(v1, true);
 		addSignatureFacts(v2, false);
-		
+
 		return sigs.values();
 	}
 
@@ -195,7 +196,7 @@ public class ModuleMerger {
 				}
 			}
 		}
-		
+
 	}
 
 	/**
@@ -492,7 +493,6 @@ public class ModuleMerger {
 		}
 	}
 
-
 	private static Func replaceSigRefs(Func fun, boolean inV1) {
 		List<Decl> decls = new ArrayList<Decl>();
 		for (Decl d : fun.decls) {
@@ -720,14 +720,35 @@ public class ModuleMerger {
 		return attrs.toArray(new Attr[] {});
 	}
 
-	public static void mergeCommands(Command cmd1, Command cmd2) {
-		c1 = c1.and(replaceSigRefs(cmd1.formula, true));
-		c2 = c2.and(replaceSigRefs(cmd2.formula, false));
-	}
-
+	/**
+	 * a run command taking overall scopes of first command (run or assert) but ignoring any expressions
+	 * 
+	 * @param v1
+	 * @param v2
+	 * @return
+	 */
 	public static Command generateCommand(Module v1, Module v2) {
-		ModuleMerger.mergeCommands(v1.getAllCommands().get(0), v2.getAllCommands().get(0));
+		Command cmd1 = v1.getAllCommands().get(0);
+		Command cmd2 = v2.getAllCommands().get(0);
 
-		return new Command(false, -1, -1, -1, c2.and(c1.not()));
+		int overall = Math.max(cmd1.overall, cmd2.overall);
+
+		for (Sig s : v1.getAllReachableUserDefinedSigs()) {
+			CommandScope scope = cmd1.getScope(s);
+			if (scope != null && scope.endingScope > overall) {
+				System.err.println("Default scope not enough for sig " + s.label);
+			}
+		}
+		for (Sig s : v2.getAllReachableUserDefinedSigs()) {
+			CommandScope scope = cmd2.getScope(s);
+			if (scope != null && scope.endingScope > overall) {
+				System.err.println("Default scope not enough for sig " + s.label);
+			}
+		}
+
+//		c1 = c1.and(replaceSigRefs(cmd1.formula, true));
+//		c2 = c2.and(replaceSigRefs(cmd2.formula, false));
+
+		return new Command(false, overall, -1, -1, c2.and(c1.not()));
 	}
 }

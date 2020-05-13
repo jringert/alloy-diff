@@ -3,6 +3,7 @@ package org.alloytools.alloy.diff;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,6 +15,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import edu.mit.csail.sdg.alloy4.ErrorSyntax;
 import edu.mit.csail.sdg.alloy4.ErrorType;
 import edu.mit.csail.sdg.ast.ExprVar;
 import edu.mit.csail.sdg.ast.Sig;
@@ -77,7 +79,16 @@ public class ModuleDiffTest {
 	@MethodSource("allAlloyFiles")
 	public void diffEmptySelf(Path f) {
 		System.out.println("diff empty.als and " + f.toString());
-		A4Solution ans = ModuleDiff.diff("misc/empty.als", f.toString());
+		A4Solution ans = null;
+		try {
+			ans = ModuleDiff.diff("misc/empty.als", f.toString());
+		} catch (ErrorSyntax e) {
+			if (e.getMessage().contains("File cannot be found")) {
+				return;
+			} else {
+				throw e;
+			}
+		}
 		
 		if (ans.satisfiable()) {
 			assertTrue("Empty module had an empty diff with " + f.toString(), size(ans) > 0);
@@ -94,7 +105,7 @@ public class ModuleDiffTest {
 		int size = 0;
 		for (ExprVar v : ans.getAllAtoms()) {
 			Sig as = v.type().iterator().next().get(0);
-			if (as.isEnum == null && as.toString().startsWith("this")) {
+			if (as.toString().startsWith("this")) {
 				size++;
 			}
 		}
