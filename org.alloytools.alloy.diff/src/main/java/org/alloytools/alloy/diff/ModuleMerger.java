@@ -173,7 +173,29 @@ public class ModuleMerger {
 		buildInheritanceFieldExpr(v1, v1iu, v1FieldExpr);
 		buildInheritanceFieldExpr(v2, v2iu, v2FieldExpr);
 
+		addSignatureFacts(v1, true);
+		addSignatureFacts(v2, false);
+		
 		return sigs.values();
+	}
+
+	private static void addSignatureFacts(Module orig, boolean inV1) {
+		for (Sig os : orig.getAllReachableUserDefinedSigs()) {
+			for (Expr of : os.getFacts()) {
+				Expr mergedSig = replaceSigRefs(os, inV1);
+				Decl thisDecl = mergedSig.oneOf("this");
+				List<Decl> decls = new ArrayList<>();
+				decls.add(thisDecl);
+				Expr body = replaceSigRefs(of, decls, inV1);
+				Expr sigFact = ExprQt.Op.ALL.make(of.pos, of.closingBracket, decls, body);
+				if (inV1) {
+					c1 = c1.and(sigFact);
+				} else {
+					c2 = c2.and(sigFact);
+				}
+			}
+		}
+		
 	}
 
 	/**
@@ -394,7 +416,7 @@ public class ModuleMerger {
 			for (Expr e : el.args) {
 				l.add(replaceSigRefs(e, List.copyOf(names), inV1));
 			}
-			return ExprList.make(el.pos, el.closingBracket, Op.AND, l);
+			return ExprList.make(el.pos, el.closingBracket, el.op, l);
 		case "ExprQt":
 			ExprQt eq = (ExprQt) expr;
 			List<Decl> allDecls = new ArrayList<Decl>(names);

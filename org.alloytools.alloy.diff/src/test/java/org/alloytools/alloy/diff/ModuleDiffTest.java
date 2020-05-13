@@ -135,5 +135,6 @@ public class ModuleDiffTest {
 
 		ans = ModuleDiff.diff("misc/facts/factV2.als", "misc/facts/factV1.als");
 		assertTrue(ans.satisfiable());
+		System.out.println(ans);
 	}
 }
