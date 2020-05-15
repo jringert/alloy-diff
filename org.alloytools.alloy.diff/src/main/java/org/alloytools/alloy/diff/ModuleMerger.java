@@ -646,7 +646,7 @@ public class ModuleMerger {
 			for (Expr e : el.args) {
 				l.add(replaceArrows(e));
 			}
-			return ExprList.make(el.pos, el.closingBracket, Op.AND, l);
+			return ExprList.make(el.pos, el.closingBracket, el.op, l);
 		case "Field":
 			Field f = (Field) expr;
 			return getField(sigs.get(f.sig.label), f.label);
