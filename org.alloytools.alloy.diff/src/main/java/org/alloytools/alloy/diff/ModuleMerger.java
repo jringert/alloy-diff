@@ -112,23 +112,32 @@ public class ModuleMerger {
 		for (String sName : v1Sigs.keySet()) {
 			if (v2Sigs.containsKey(sName)) {
 				// create a merged signature
-				if (v1Sigs.get(sName) instanceof PrimSig && v2Sigs.get(sName) instanceof PrimSig) {
-					sigs.put(sName, mergeSig(v1Sigs.get(sName), v2Sigs.get(sName)));
+				Sig s1 = v1Sigs.get(sName);
+				Sig s2 = v2Sigs.get(sName);
+				if (s1 instanceof PrimSig && s2 instanceof PrimSig) {
+					// ignore if both sigs are abstract and have subsigs 
+					if (!(s1.isAbstract != null && v1iu.getSubSigs(s1) != null && 
+							s2.isAbstract != null && v1iu.getSubSigs(s2) != null)) {
+						sigs.put(sName, mergeSig(s1, s2));
+					}
 				}
 			} else {
 				Sig old = v1Sigs.get(sName);
 				// adding signatures that are unique in v1
 				if (old instanceof PrimSig) {
-					Sig s = null;
-					if (old.isLone != null || old.isOne != null) {
-						s = new PrimSig(sName, Attr.LONE);
-					} else {
-						s = new PrimSig(sName);
+					// check if needed: abstract sigs with children are not needed
+					if (old.isAbstract == null || v1iu.getSubSigs(old) == null) {
+						Sig s = null;
+						if (old.isLone != null || old.isOne != null) {
+							s = new PrimSig(sName, Attr.LONE);
+						} else {
+							s = new PrimSig(sName);
+						}
+						sigs.put(sName, s);
+						c1 = generateSigAttributeConstraints(s, old, v1iu, c1);
+						// closed world
+						c2 = c2.and(s.no());
 					}
-					sigs.put(sName, s);
-					c1 = generateSigAttributeConstraints(s, old, v1iu, c1);
-					// closed world
-					c2 = c2.and(s.no());
 				}
 			}
 		}
@@ -137,16 +146,18 @@ public class ModuleMerger {
 				Sig old = v2Sigs.get(sName);
 				// adding signatures that are unique in v2
 				if (old instanceof PrimSig) {
-					Sig s = null;
-					if (old.isLone != null || old.isOne != null) {
-						s = new PrimSig(sName, Attr.LONE);
-					} else {
-						s = new PrimSig(sName);
+					if (old.isAbstract == null || v2iu.getSubSigs(old) == null) {
+						Sig s = null;
+						if (old.isLone != null || old.isOne != null) {
+							s = new PrimSig(sName, Attr.LONE);
+						} else {
+							s = new PrimSig(sName);
+						}
+						sigs.put(sName, s);
+						c2 = generateSigAttributeConstraints(s, old, v2iu, c2);
+						// closed world
+						c1 = c1.and(s.no());
 					}
-					sigs.put(sName, s);
-					c2 = generateSigAttributeConstraints(s, old, v2iu, c2);
-					// closed world
-					c1 = c1.and(s.no());
 				}
 			}
 		}
@@ -214,7 +225,13 @@ public class ModuleMerger {
 				Expr fu = getField(sigs.get(owner.label), f.label);
 				// all fields of children signatures
 				for (Sig s : iu.getSubSigs(owner)) {
-					fu = fu.plus(getField(sigs.get(s.label), f.label));
+					if (iu.getSubSigs(owner) != null) {
+						if (fu == null) {
+							fu = getField(sigs.get(s.label), f.label);
+						} else {
+							fu = fu.plus(getField(sigs.get(s.label), f.label));
+						}
+					}
 				}
 				fieldExpr.put(id, fu);
 			}
@@ -227,7 +244,14 @@ public class ModuleMerger {
 			if (mSubSigs != null) {
 				Expr union = sigs.get(parent.label);
 				for (Sig s : mSubSigs) {
-					union = union.plus(sigs.get(s.label));
+					// take care of null sigs that were not added
+					if (sigs.get(s.label) != null) {
+						if (union == null) {
+							union = sigs.get(s.label);
+						} else {
+							union = union.plus(sigs.get(s.label));
+						}
+					}
 				}
 				sigExpr.put(parent.label, union);
 			}
@@ -274,12 +298,15 @@ public class ModuleMerger {
 			unique2.add(f2);
 		}
 
+		List<Decl> names = new ArrayList<>();
+		names.add(mergedSig.decl);
+
 		for (Field f1 : fields1) {
 			for (Field f2 : fields2) {
 				if (f1.label.equals(f2.label)) {
 					if (f1.decl().expr instanceof ExprUnary && f2.decl().expr instanceof ExprUnary) {
-						ExprUnary e1 = (ExprUnary) replaceSigRefs(f1.decl().expr, true);
-						ExprUnary e2 = (ExprUnary) replaceSigRefs(f2.decl().expr, false);
+						ExprUnary e1 = (ExprUnary) replaceSigRefs(f1.decl().expr, names, true);
+						ExprUnary e2 = (ExprUnary) replaceSigRefs(f2.decl().expr, names, false);
 						Expr union = e1.sub.plus(e2.sub);
 						ExprUnary.Op op = getMergeOp(e1.op, e2.op);
 						Field f = mergedSig.addField(f1.label, op.make(f1.pos, union));
@@ -293,8 +320,8 @@ public class ModuleMerger {
 						unique2.remove(f2);
 						break;
 					} else if (f1.decl().expr instanceof ExprBinary && f2.decl().expr instanceof ExprBinary) {
-						Expr e1 = replaceSigRefs(f1.decl().expr, true);
-						Expr e2 = replaceSigRefs(f2.decl().expr, false);
+						Expr e1 = replaceSigRefs(f1.decl().expr, names, true);
+						Expr e2 = replaceSigRefs(f2.decl().expr, names, false);
 						Expr union = replaceArrows(e1).plus(replaceArrows(e2));
 						Field f = mergedSig.addField(f1.label, union);
 
@@ -322,14 +349,19 @@ public class ModuleMerger {
 	}
 
 	private static void addFields(Sig s, Set<Field> fields, boolean inV1) {
+		List<Decl> names = new ArrayList<>();
+		names.add(s.decl);
 		for (Field f : fields) {
-			s.addField(f.label, replaceSigRefs(f.decl().expr, inV1));
+			s.addField(f.label, replaceSigRefs(f.decl().expr, names, inV1));
 		}
 	}
 
 	private static void addUniqueField(Sig mergedSig, Field field, boolean inC1) {
+		List<Decl> names = new ArrayList<>();
+		names.add(mergedSig.decl);
+
 		Field f;
-		Expr e = replaceSigRefs(field.decl().expr, inC1);
+		Expr e = replaceSigRefs(field.decl().expr, names, inC1);
 		if (e instanceof ExprUnary) {
 			ExprUnary.Op op = getMergeOp(((ExprUnary) e).op, ExprUnary.Op.SETOF);
 			f = mergedSig.addField(field.label, op.make(field.pos, ((ExprUnary) e).sub));
@@ -442,9 +474,10 @@ public class ModuleMerger {
 			// FIXME figure out how to correctly use the this reference in signatures where
 			// one field references the ohter
 			if (ev.label.equals("this")) {
+				System.err.println("FIXME");
 				return getExprVarToSig(ev);
 			}
-			ExprVar ret = ExprVar.make(ev.pos, ev.label, replaceSigRefs(t));
+			ExprVar ret = ExprVar.make(ev.pos, ev.label, replaceSigRefs(t, inV1));
 			return ret;
 		case "Field":
 			Field f = (Field) expr;
@@ -464,6 +497,7 @@ public class ModuleMerger {
 		case "ExprConstant":
 			return expr;
 		case "ExprCall":
+			// 
 			ExprCall ec = (ExprCall) expr;
 			List<Expr> args = new ArrayList<>();
 			for (Expr c : ec.args) {
@@ -481,11 +515,13 @@ public class ModuleMerger {
 			Decl d = new Decl(null, null, null, letNames, evar);
 			names = new ArrayList<>(names);
 			names.add(d);
-			return ExprLet.make(let.pos, evar, replaceSigRefs(let.expr, names, inV1), replaceSigRefs(let.sub, names, inV1));
+			return ExprLet.make(let.pos, evar, replaceSigRefs(let.expr, names, inV1),
+					replaceSigRefs(let.sub, names, inV1));
 		case "ExprITE":
 			ExprITE ite = (ExprITE) expr;
 			return ExprITE.make(ite.pos, replaceSigRefs(ite.cond, List.copyOf(names), inV1),
-					replaceSigRefs(ite.left, List.copyOf(names), inV1), replaceSigRefs(ite.right, List.copyOf(names), inV1));
+					replaceSigRefs(ite.left, List.copyOf(names), inV1),
+					replaceSigRefs(ite.right, List.copyOf(names), inV1));
 		default:
 			System.out.println(expr.getClass().getSimpleName());
 			throw new RuntimeException(
@@ -495,9 +531,12 @@ public class ModuleMerger {
 
 	private static Func replaceSigRefs(Func fun, boolean inV1) {
 		List<Decl> decls = new ArrayList<Decl>();
+		// FIXME some functions have a decl that refernces a signature as this
+		// ..\models-master\ietf-rfcs\rfc7617-BasicAuth\basic-auth.als
+		// fun Charset.binary[ s : String ] : Binary {this.maps[s]}
 		for (Decl d : fun.decls) {
-			decls.add(
-					new Decl(d.isPrivate, d.disjoint, d.disjoint2, replaceSigRefs(d.names, inV1), replaceSigRefs(d.expr, inV1)));
+			decls.add(new Decl(d.isPrivate, d.disjoint, d.disjoint2, replaceSigRefs(d.names, inV1),
+					replaceSigRefs(d.expr, inV1)));
 		}
 		Func fun2 = new Func(fun.pos, fun.label, decls, replaceSigRefs(fun.returnDecl, decls, inV1),
 				replaceSigRefs(fun.getBody(), decls, inV1));
@@ -509,6 +548,7 @@ public class ModuleMerger {
 		if (pt.arity() > 1) {
 			throw new RuntimeException("Arity > 1 when resolving a \"this\" expression");
 		}
+		// FIXME this might need to look up the signature expression instead
 		Sig s = sigs.get(pt.get(0).label);
 		if (s == null) {
 			s = getInternalSig(pt.get(0).label);
@@ -520,15 +560,19 @@ public class ModuleMerger {
 		return (ExprVar) s.decl.get();
 	}
 
-	private static Type replaceSigRefs(Type t) {
+	private static Type replaceSigRefs(Type t, boolean inV1) {
 		for (ProductType pt : t) {
 			Type product = null;
 			for (int i = 0; i < pt.arity(); i++) {
-				Sig s = sigs.get(pt.get(i).label);
+				Expr s = (inV1?v1SigExpr:v2SigExpr).get(pt.get(i).label);
+				if (s == null) {
+					s = sigs.get(pt.get(i).label);
+				}
 				if (s == null) {
 					s = getInternalSig(pt.get(i).label);
 					if (s == null) {
-						throw new RuntimeException("Signature " + pt.get(i).label + " not found in merged signature map.");
+						throw new RuntimeException(
+								"Signature " + pt.get(i).label + " not found in merged signature map.");
 					}
 				}
 				if (product == null) {
@@ -564,9 +608,11 @@ public class ModuleMerger {
 	}
 
 	private static Expr getField(Sig sig, String label) {
-		for (Field f : sig.getFields()) {
-			if (f.label.equals(label)) {
-				return f;
+		if (sig != null) {
+			for (Field f : sig.getFields()) {
+				if (f.label.equals(label)) {
+					return f;
+				}
 			}
 		}
 		return null;
@@ -586,7 +632,8 @@ public class ModuleMerger {
 		case "ExprBinary":
 			ExprBinary be = (ExprBinary) expr;
 			if (be.op.isArrow) {
-				return ExprBinary.Op.ARROW.make(be.pos, be.closingBracket, replaceArrows(be.left), replaceArrows(be.right));
+				return ExprBinary.Op.ARROW.make(be.pos, be.closingBracket, replaceArrows(be.left),
+						replaceArrows(be.right));
 			} else {
 				return be.op.make(be.pos, be.closingBracket, replaceArrows(be.left), replaceArrows(be.right));
 			}
@@ -721,34 +768,34 @@ public class ModuleMerger {
 	}
 
 	/**
-	 * a run command taking overall scopes of first command (run or assert) but ignoring any expressions
+	 * a run command taking only new constraints (ignoring any expressions and scopes)
 	 * 
 	 * @param v1
 	 * @param v2
 	 * @return
 	 */
 	public static Command generateCommand(Module v1, Module v2) {
-		Command cmd1 = v1.getAllCommands().get(0);
-		Command cmd2 = v2.getAllCommands().get(0);
-
-		int overall = Math.max(cmd1.overall, cmd2.overall);
-
-		for (Sig s : v1.getAllReachableUserDefinedSigs()) {
-			CommandScope scope = cmd1.getScope(s);
-			if (scope != null && scope.endingScope > overall) {
-				System.err.println("Default scope not enough for sig " + s.label);
-			}
-		}
-		for (Sig s : v2.getAllReachableUserDefinedSigs()) {
-			CommandScope scope = cmd2.getScope(s);
-			if (scope != null && scope.endingScope > overall) {
-				System.err.println("Default scope not enough for sig " + s.label);
-			}
-		}
+//		Command cmd1 = v1.getAllCommands().get(0);
+//		Command cmd2 = v2.getAllCommands().get(0);
+//
+//		int overall = Math.max(cmd1.overall, cmd2.overall);
+//
+//		for (Sig s : v1.getAllReachableUserDefinedSigs()) {
+//			CommandScope scope = cmd1.getScope(s);
+//			if (scope != null && scope.endingScope > overall) {
+//				System.err.println("Default scope not enough for sig " + s.label);
+//			}
+//		}
+//		for (Sig s : v2.getAllReachableUserDefinedSigs()) {
+//			CommandScope scope = cmd2.getScope(s);
+//			if (scope != null && scope.endingScope > overall) {
+//				System.err.println("Default scope not enough for sig " + s.label);
+//			}
+//		}
 
 //		c1 = c1.and(replaceSigRefs(cmd1.formula, true));
 //		c2 = c2.and(replaceSigRefs(cmd2.formula, false));
 
-		return new Command(false, overall, -1, -1, c2.and(c1.not()));
+		return new Command(false, -1, -1, -1, c2.and(c1.not()));
 	}
 }

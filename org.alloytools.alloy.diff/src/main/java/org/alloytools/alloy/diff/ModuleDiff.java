@@ -15,10 +15,32 @@ import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 public class ModuleDiff {
 
 	private static A4Reporter rep = new A4Reporter() {
+		private boolean quiet = true;
+		
+		@Override
+		public void bound(String msg) {
+			if (!quiet) {
+				System.out.print(msg);
+				System.out.flush();
+			}
+			super.bound(msg);
+		}
+		
+		@Override
+		public void debug(String msg) {
+			if (!quiet) {
+				System.out.print(msg);
+				System.out.flush();
+			}
+			super.debug(msg);
+		}
+		
 		@Override
 		public void warning(ErrorWarning msg) {
-			System.out.print("Relevance Warning:\n" + (msg.toString().trim()) + "\n\n");
-			System.out.flush();
+			if (!quiet) {
+				System.out.print("Relevance Warning:\n" + (msg.toString().trim()) + "\n\n");
+				System.out.flush();
+			}
 		}
 	};
 

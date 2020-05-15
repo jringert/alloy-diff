@@ -3,7 +3,6 @@ package org.alloytools.alloy.diff;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -52,6 +51,7 @@ public class ModuleDiffTest {
 		}
 	}
 
+	@SuppressWarnings("resource")
 	public static Stream<Arguments> allAlloyFiles() throws Exception {
 		Stream<Arguments> allFiles = null;
 		for (String folder : sigFolders) {
@@ -145,7 +145,13 @@ public class ModuleDiffTest {
 		assertFalse(ans.satisfiable());
 
 		ans = ModuleDiff.diff("misc/facts/factV2.als", "misc/facts/factV1.als");
-		assertTrue(ans.satisfiable());
-		System.out.println(ans);
+		assertTrue(ans.satisfiable());		
 	}
+	
+	@Test
+	public void diffFarmer() {
+		String farmerFile = "../iAlloy-dataset-master/mutant_version_set/farmer/v1/farmer.als";
+		A4Solution ans = ModuleDiff.diff("misc/empty.als", farmerFile);
+		assertTrue(ans.satisfiable());
+	}	
 }
