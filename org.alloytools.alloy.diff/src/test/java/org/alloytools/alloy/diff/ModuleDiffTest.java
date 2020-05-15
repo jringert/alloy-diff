@@ -112,6 +112,29 @@ public class ModuleDiffTest {
 		return size;
 	}
 	
+	/**
+	 * Checks whether the empty module has instances that the current one doesn't.
+	 * This could be the case if the current module is unsat by itself (but then the
+	 * instances must be empty).
+	 * 
+	 * @param f
+	 */
+	@ParameterizedTest
+	@MethodSource("allAlloyFiles")
+	public void diffSelfSelf(Path f) {
+		System.out.println("diff " + f.toString() + " and itself");
+		try {
+			A4Solution ans = ModuleDiff.diff(f.toString(), f.toString());
+			assertTrue(f.toString() + " had a satisfiable diff with itself", !ans.satisfiable());
+		} catch (ErrorType e) {
+			if (e.getMessage().contains("higher-order")) {
+				System.out.println(e.getMessage());
+			} else {
+				throw e;
+			}
+		}
+	}
+	
 	@Test
 	public void diffExtends12() {
 		A4Solution ans = ModuleDiff.diff("misc/inheritance/extends1v1.als", "misc/inheritance/extends1v2.als");
