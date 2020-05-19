@@ -126,7 +126,7 @@ public class ModuleMerger {
 				if (s1 instanceof PrimSig && s2 instanceof PrimSig) {
 					// ignore if both sigs are abstract and have subsigs
 					if (!(s1.isAbstract != null && v1iu.getSubSigs(s1) != null && s2.isAbstract != null
-							&& v1iu.getSubSigs(s2) != null)) {
+							&& v2iu.getSubSigs(s2) != null)) {
 						sigs.put(sName, mergeSig(s1, s2));
 					}
 				}
@@ -355,7 +355,7 @@ public class ModuleMerger {
 						} else {
 							Expr union = replaceArrows(e1).plus(replaceArrows(e2));
 							f = mergedSig.addField(f1.label, union);
-							
+														
 //						Expr e1mult = ExprBinary.Op.ARROW.make(f1.pos, f1.closingBracket, mergedSig, e1);
 //						Expr e2mult = ExprBinary.Op.ARROW.make(f2.pos, f2.closingBracket, mergedSig, e2);
 //						c1 = c1.and(f.decl().get().in(e1mult));
@@ -829,7 +829,7 @@ public class ModuleMerger {
 		
 
 		int overall = Math.max(cmd1.overall, cmd2.overall);
-		overall = Math.max(overall, 4);
+		overall = Math.max(overall, 4); // FIXME not needed if inheritance scope is taken into account
 		int bitwidth = Math.max(cmd1.bitwidth, cmd2.bitwidth);
 		int maxseq = Math.max(cmd1.maxseq, cmd2.maxseq);
 
