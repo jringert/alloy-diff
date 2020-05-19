@@ -307,7 +307,8 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
         private ConstList<Sig> growableSigs         = null;
         private A4Solution     partial              = null;
 
-        public GreedySimulator() {}
+        public GreedySimulator() {
+        }
 
         private TupleSet convert(TupleFactory factory, Expr f) throws Err {
             TupleSet old = ((A4TupleSet) (partial.eval(f))).debugGetKodkodTupleset();
@@ -444,10 +445,12 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
                 }
 
                 @Override
-                public void resultSAT(Object command, long solvingTime, Object solution) {}
+                public void resultSAT(Object command, long solvingTime, Object solution) {
+                }
 
                 @Override
-                public void resultUNSAT(Object command, long solvingTime, Object solution) {}
+                public void resultUNSAT(Object command, long solvingTime, Object solution) {
+                }
             };
             // Form the list of commands
             List<Command> commands = new ArrayList<Command>();
@@ -643,7 +646,7 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
         Object y = visitThis(x);
         if (y instanceof Formula)
             return (Formula) y;
-        throw new ErrorFatal(x.span(), "This should have been a formula.\nInstead it is " + y);
+        throw new ErrorFatal(x.span(), "This should have been a formula.\nInstead it is " + y + " " + x.pos);
     }
 
     /**
@@ -879,7 +882,7 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
         if (ans == null)
             ans = a2k(x);
         if (ans == null)
-            throw new ErrorFatal(x.pos, "Variable \"" + x + "\" is not bound to a legal value during translation.\n");
+            throw new ErrorFatal(x.pos, "Variable \"" + x + "\" is not bound to a legal value during translation of " + x.pos + ".\n");
         return ans;
     }
 
