@@ -81,6 +81,11 @@ public class ModuleMerger {
 	protected static Map<String, Sig> v2Sigs;
 	
 	/**
+	 * workaround for Alloy bug on parsing and predicate pred/totalOrder
+	 */
+	private static boolean inSigFactOfOrd = false;
+	
+	/**
 	 * Merges signatures from v1 and v2 by creating combined Sigs for common
 	 * signatures and copying unique signatures
 	 *
@@ -202,7 +207,13 @@ public class ModuleMerger {
 				Decl thisDecl = mergedSig.oneOf("this");
 				List<Decl> decls = new ArrayList<>();
 				decls.add(thisDecl);
+				if (os.label.equals("ordering/Ord")) {
+					inSigFactOfOrd = true;
+				}
 				Expr body = replaceSigRefs(of, decls, inV1);
+				if (os.label.equals("ordering/Ord")) {
+					inSigFactOfOrd = false;
+				}
 				Expr sigFact = ExprQt.Op.ALL.make(of.pos, of.closingBracket, decls, body);
 				if (inV1) {
 					c1 = c1.and(sigFact);
@@ -318,14 +329,19 @@ public class ModuleMerger {
 					if (f1.decl().expr instanceof ExprUnary && f2.decl().expr instanceof ExprUnary) {
 						ExprUnary e1 = (ExprUnary) replaceSigRefs(f1.decl().expr, names, true);
 						ExprUnary e2 = (ExprUnary) replaceSigRefs(f2.decl().expr, names, false);
-						Expr union = e1.sub.plus(e2.sub);
-						ExprUnary.Op op = getMergeOp(e1.op, e2.op);
-						Field f = mergedSig.addField(f1.label, op.make(f1.pos, union));
-
+						Field f;
+						if (e1.isSame(e2)) {
+							f = mergedSig.addField(f1.label, e1.op.make(f1.pos, e1.sub));
+						} else {
+							Expr union = e1.sub.plus(e2.sub);
+							ExprUnary.Op op = getMergeOp(e1.op, e2.op);
+							f = mergedSig.addField(f1.label, op.make(f1.pos, union));
+							
 //						Expr e1mult = getArrowForOp(e1.op).make(f1.pos, f1.closingBracket, mergedSig, e1.sub);
 //						Expr e2mult = getArrowForOp(e2.op).make(f2.pos, f2.closingBracket, mergedSig, e2.sub);
 //						c1 = c1.and(f.decl().get().in(e1mult));
 //						c2 = c2.and(f.decl().get().in(e2mult));
+						}
 
 						unique1.remove(f1);
 						unique2.remove(f2);
@@ -333,13 +349,18 @@ public class ModuleMerger {
 					} else if (f1.decl().expr instanceof ExprBinary && f2.decl().expr instanceof ExprBinary) {
 						Expr e1 = replaceSigRefs(f1.decl().expr, names, true);
 						Expr e2 = replaceSigRefs(f2.decl().expr, names, false);
-						Expr union = replaceArrows(e1).plus(replaceArrows(e2));
-						Field f = mergedSig.addField(f1.label, union);
-
+						Field f;
+						if (e1.isSame(e2)) {
+							f = mergedSig.addField(f1.label, e1);
+						} else {
+							Expr union = replaceArrows(e1).plus(replaceArrows(e2));
+							f = mergedSig.addField(f1.label, union);
+							
 //						Expr e1mult = ExprBinary.Op.ARROW.make(f1.pos, f1.closingBracket, mergedSig, e1);
 //						Expr e2mult = ExprBinary.Op.ARROW.make(f2.pos, f2.closingBracket, mergedSig, e2);
 //						c1 = c1.and(f.decl().get().in(e1mult));
 //						c2 = c2.and(f.decl().get().in(e2mult));
+						}
 
 						unique1.remove(f1);
 						unique2.remove(f2);
@@ -439,6 +460,16 @@ public class ModuleMerger {
 					replaceSigRefs(be.right, List.copyOf(names), inV1));
 		case "PrimSig":
 			PrimSig ps = (PrimSig) expr;
+			// workaround for totalOrder bug
+			if (inSigFactOfOrd && ps.label.equals("ordering/Ord")) {
+				for (Decl d : names) {
+					for (ExprHasName n : d.names) {
+						if (n.label.equals("this")) {
+							return n;
+						}
+					}
+				}
+			}
 			// expressions taking care of inheritance override normal signatures
 			if (inV1 && v1SigExpr.get(ps.label) != null) {
 				return v1SigExpr.get(ps.label);
@@ -798,6 +829,7 @@ public class ModuleMerger {
 		
 
 		int overall = Math.max(cmd1.overall, cmd2.overall);
+		overall = Math.max(overall, 4);
 		int bitwidth = Math.max(cmd1.bitwidth, cmd2.bitwidth);
 		int maxseq = Math.max(cmd1.maxseq, cmd2.maxseq);
 
@@ -812,14 +844,19 @@ public class ModuleMerger {
 						
 			int scope = -1;
 			boolean exact = false;
+			
+			// take scope from v1
 			if (s1 != null) {
 				scope = Math.max(scope, s1.endingScope);
 				exact |= s1.isExact;
 			}
+			// or take scope from v1
 			if (s2 != null) {
 				scope = Math.max(scope, s2.endingScope);
 				exact |= s2.isExact;
 			}
+			
+			// FIXME take inheritance scopes into account
 			
 			if (scope != -1) {
 				cmd = cmd.change(s, exact, scope);

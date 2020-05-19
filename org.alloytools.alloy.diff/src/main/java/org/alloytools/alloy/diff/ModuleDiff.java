@@ -15,8 +15,8 @@ import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 public class ModuleDiff {
 
 	private static A4Reporter rep = new A4Reporter() {
-		private boolean quiet = true;
-		
+		private boolean quiet = false;
+
 		@Override
 		public void bound(String msg) {
 			if (!quiet) {
@@ -25,7 +25,7 @@ public class ModuleDiff {
 			}
 			super.bound(msg);
 		}
-		
+
 		@Override
 		public void debug(String msg) {
 			if (!quiet) {
@@ -34,11 +34,36 @@ public class ModuleDiff {
 			}
 			super.debug(msg);
 		}
-		
+
 		@Override
 		public void warning(ErrorWarning msg) {
 			if (!quiet) {
 				System.out.print("Relevance Warning:\n" + (msg.toString().trim()) + "\n\n");
+				System.out.flush();
+			}
+		}
+
+		@Override
+		public void solve(int primaryVars, int totalVars, int clauses) {
+			if (!quiet) {
+				System.out.print(totalVars + " vars. " + primaryVars + " primary vars. " + clauses + " clauses.");
+				System.out.flush();
+			}
+			super.solve(primaryVars, totalVars, clauses);
+		}
+
+//		@Override
+//		public void typecheck(String msg) {
+//			if (!quiet) {
+//				System.out.print(msg);
+//				System.out.flush();
+//			}
+//		}
+
+		@Override
+		public void translate(String solver, int bitwidth, int maxseq, int skolemDepth, int symmetry) {
+			if (!quiet) {
+				System.out.print("bitwidth " + bitwidth + " skolemDepth " + skolemDepth);
 				System.out.flush();
 			}
 		}
@@ -48,6 +73,7 @@ public class ModuleDiff {
 
 	/**
 	 * instances of rightFile that are not instances of left file
+	 * 
 	 * @param leftFile
 	 * @param rightFile
 	 * @return
@@ -84,8 +110,8 @@ public class ModuleDiff {
 
 	public static A4Solution getSolution(String fileName) {
 		Module v1 = CompUtil.parseEverything_fromFile(rep, null, fileName);
-		A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, v1.getAllReachableSigs(),
-				v1.getAllCommands().get(0), options);
+		A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, v1.getAllReachableSigs(), v1.getAllCommands().get(0),
+				options);
 		return ans;
 	}
 }

@@ -144,4 +144,22 @@ public class InheritanceUtil {
 		ps.addAll(subSigs.keySet());
 		return ps;
 	}
+	
+	/**
+	 * get parent signature
+	 *  
+	 * @return null if signature is its own parent
+	 */
+	public Sig getParentSig(Sig child) {
+		Set<Sig> top = getTopLvlSigsWithChildren();
+		if (top.contains(child)) { 
+			return null;
+		}		
+		for (Sig parent : top) {
+			if (subSigs.get(parent).contains(child)) {
+				return parent;
+			}
+		}
+		return null;
+	}
 }

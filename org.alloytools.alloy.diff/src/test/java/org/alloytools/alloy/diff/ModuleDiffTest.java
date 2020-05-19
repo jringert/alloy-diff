@@ -23,8 +23,9 @@ import edu.mit.csail.sdg.translator.A4Solution;
 
 public class ModuleDiffTest {	
 	
-	static String[] sigFolders = new String[] { "misc", "../models-master", "../iAlloy-dataset-master", "../platinum-experiment-data/" };
+//	static String[] sigFolders = new String[] { "misc", "../models-master", "../iAlloy-dataset-master", "../platinum-experiment-data/" };
 //	static String[] sigFolders = new String[] { "misc/fields/fields2.als" };
+	static String[] sigFolders = new String[] { "misc"};
 //	static String[] sigFolders = new String[] { "misc/quantification/q2.als" };
 //	static String[] sigFolders = new String[] { "misc/ordering.als" };
 //	static String[] sigFolders = new String[] { "..\\models-master\\simple-models\\state-machine\\flip-flop.als"};
