@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.stream.Stream;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -23,12 +24,12 @@ import edu.mit.csail.sdg.translator.A4Solution;
 
 public class ModuleDiffTest {	
 	
-//	static String[] sigFolders = new String[] { "misc", "../models-master", "../iAlloy-dataset-master", "../platinum-experiment-data/" };
+	static String[] sigFolders = new String[] { "misc", "../models-master", "../iAlloy-dataset-master", "../platinum-experiment-data/" };
 //	static String[] sigFolders = new String[] { "misc/fields/fields2.als" };
 //	static String[] sigFolders = new String[] { "misc"};
 //	static String[] sigFolders = new String[] { "misc/quantification/q2.als" };
 //	static String[] sigFolders = new String[] { "misc/ordering.als" };
-	static String[] sigFolders = new String[] { "misc/enum/enum1.als" };
+//	static String[] sigFolders = new String[] { "misc/enum/enum1.als" };
 //	static String[] sigFolders = new String[] { "..\\models-master\\simple-models\\state-machine\\flip-flop.als"};
 
 	/**
@@ -175,9 +176,41 @@ public class ModuleDiffTest {
 	}
 	
 	@Test
+	public void diffPaper() {
+		// v2 refines v1
+
+		// no instance of v2 that is not in v1
+		A4Solution ans = ModuleDiff.diff("misc/paper/v1.als", "misc/paper/v2.als");
+		assertFalse(ans.satisfiable());
+		// some instance of v1 that is not in v2
+		ans = ModuleDiff.diff("misc/paper/v2.als", "misc/paper/v1.als");
+		assertTrue(ans.satisfiable());
+
+		// v3 refines v1
+
+		// no instance of v3 that is not in v1
+		ans = ModuleDiff.diff("misc/paper/v1.als", "misc/paper/v3.als");
+		assertFalse(ans.satisfiable());
+		// some instance of v1 that is not in v3
+		ans = ModuleDiff.diff("misc/paper/v3.als", "misc/paper/v1.als");
+		assertTrue(ans.satisfiable());
+
+		
+		// v2 eq v3
+		ans = ModuleDiff.diff("misc/paper/v2.als", "misc/paper/v3.als");
+		assertFalse(ans.satisfiable());
+
+		ans = ModuleDiff.diff("misc/paper/v3.als", "misc/paper/v3.als");
+		assertFalse(ans.satisfiable());		
+	}
+	
+	
+	@Test
+	@Ignore
 	public void diffFarmer() {
 		String farmerFile = "../iAlloy-dataset-master/mutant_version_set/farmer/v1/farmer.als";
 		A4Solution ans = ModuleDiff.diff("misc/empty.als", farmerFile);
+//		A4Solution ans = ModuleDiff.diff(farmerFile, farmerFile);
 		assertTrue(ans.satisfiable());
 	}
 	

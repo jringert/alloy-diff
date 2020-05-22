@@ -207,11 +207,11 @@ public class ModuleMerger {
 				Decl thisDecl = mergedSig.oneOf("this");
 				List<Decl> decls = new ArrayList<>();
 				decls.add(thisDecl);
-				if (os.label.equals("ordering/Ord")) {
+				if (os.label.endsWith("/Ord")) {
 					inSigFactOfOrd = true;
 				}
 				Expr body = replaceSigRefs(of, decls, inV1);
-				if (os.label.equals("ordering/Ord")) {
+				if (os.label.endsWith("/Ord")) {
 					inSigFactOfOrd = false;
 				}
 				Expr sigFact = ExprQt.Op.ALL.make(of.pos, of.closingBracket, decls, body);
@@ -337,10 +337,10 @@ public class ModuleMerger {
 							ExprUnary.Op op = getMergeOp(e1.op, e2.op);
 							f = mergedSig.addField(f1.label, op.make(f1.pos, union));
 							
-//						Expr e1mult = getArrowForOp(e1.op).make(f1.pos, f1.closingBracket, mergedSig, e1.sub);
-//						Expr e2mult = getArrowForOp(e2.op).make(f2.pos, f2.closingBracket, mergedSig, e2.sub);
-//						c1 = c1.and(f.decl().get().in(e1mult));
-//						c2 = c2.and(f.decl().get().in(e2mult));
+						Expr e1mult = getArrowForOp(e1.op).make(f1.pos, f1.closingBracket, mergedSig, e1.sub);
+						Expr e2mult = getArrowForOp(e2.op).make(f2.pos, f2.closingBracket, mergedSig, e2.sub);
+						c1 = c1.and(f.decl().get().in(e1mult));
+						c2 = c2.and(f.decl().get().in(e2mult));
 						}
 
 						unique1.remove(f1);
@@ -816,14 +816,14 @@ public class ModuleMerger {
 	}
 
 	/**
-	 * a run command taking only new constraints (ignoring any expressions and
-	 * scopes)
+	 * a run command diffing the two original commands 
 	 * 
 	 * @param v1
 	 * @param v2
 	 * @return
 	 */
-	public static Command generateCommand(Module v1, Module v2) {
+	public static Command generateDiffCommand(Module v1, Module v2) {
+		
 		Command cmd1 = v1.getAllCommands().get(0);
 		Command cmd2 = v2.getAllCommands().get(0);
 		
@@ -872,6 +872,36 @@ public class ModuleMerger {
 
 
 //		return new Command(false, -1, -1, -1, c2.and(c1.not()));
+		return cmd;
+	}
+	
+	/**
+	 * a run command diffing the two original commands 
+	 * 
+	 * @param v1
+	 * @param v2
+	 * @return
+	 */
+	public static Command generatePlainDiffCommand(Module v1, Module v2, int scope) {
+		
+		Command cmd1 = v1.getAllCommands().get(0);
+		Command cmd2 = v2.getAllCommands().get(0);
+		
+		c1 = c1.and(replaceSigRefs(v1.getAllReachableFacts(), true));
+		c2 = c2.and(replaceSigRefs(v2.getAllReachableFacts(), false));
+		
+		Command cmd = new Command(false, scope, -1, -1, c2.and(c1.not()));
+
+		for (Sig s: sigs.values()) {			
+			if (cmd1.additionalExactScopes.contains(v1Sigs.get(s.label)) ||
+					cmd2.additionalExactScopes.contains(v2Sigs.get(s.label))) {
+				List<Sig> exactScopes = new ArrayList<>(cmd.additionalExactScopes);
+				exactScopes.add(s);				
+				cmd = cmd.change(exactScopes.toArray(new Sig[] {}));
+			}
+		}
+
+
 		return cmd;
 	}
 }

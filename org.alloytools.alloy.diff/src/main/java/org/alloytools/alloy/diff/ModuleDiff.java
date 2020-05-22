@@ -15,7 +15,7 @@ import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 public class ModuleDiff {
 
 	private static A4Reporter rep = new A4Reporter() {
-		private boolean quiet = false;
+		private boolean quiet = true;
 
 		@Override
 		public void bound(String msg) {
@@ -97,11 +97,21 @@ public class ModuleDiff {
 	 */
 	private static A4Solution diff(Module v1, Module v2) {
 
-		options.solver = A4Options.SatSolver.SAT4J;
+		if (System.getProperty("os.name").contains("indows")) {
+			options.solver = A4Options.SatSolver.SAT4J;
+		} else {
+			options.solver = A4Options.SatSolver.CryptoMiniSatJNI;
+		}
 
 		Collection<Sig> sigs = ModuleMerger.mergeSigs(v1, v2);
+		
+		for (Sig s : sigs) {
+			if (s.label.endsWith("/Ord")) {
+				throw new RuntimeException("Ordering not supported.");
+			}
+		}
 
-		Command diffCommand = ModuleMerger.generateCommand(v1, v2);
+		Command diffCommand = ModuleMerger.generatePlainDiffCommand(v1, v2, -1);
 
 		A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, sigs, diffCommand, options);
 
