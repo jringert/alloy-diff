@@ -79,12 +79,12 @@ public class ModuleMerger {
 
 	protected static Map<String, Sig> v1Sigs;
 	protected static Map<String, Sig> v2Sigs;
-	
+
 	/**
 	 * workaround for Alloy bug on parsing and predicate pred/totalOrder
 	 */
 	private static boolean inSigFactOfOrd = false;
-	
+
 	/**
 	 * Merges signatures from v1 and v2 by creating combined Sigs for common
 	 * signatures and copying unique signatures
@@ -336,11 +336,13 @@ public class ModuleMerger {
 							Expr union = e1.sub.plus(e2.sub);
 							ExprUnary.Op op = getMergeOp(e1.op, e2.op);
 							f = mergedSig.addField(f1.label, op.make(f1.pos, union));
+
+							Decl ths = mergedSig.decl; 
+							Expr e1mult = ExprQt.Op.ALL.make(f1.pos, f1.closingBracket, List.of(ths), ths.get().join(f).in(e1.sub));
+							Expr e2mult = ExprQt.Op.ALL.make(f2.pos, f2.closingBracket, List.of(ths), ths.get().join(f).in(e2.sub));
 							
-						Expr e1mult = getArrowForOp(e1.op).make(f1.pos, f1.closingBracket, mergedSig, e1.sub);
-						Expr e2mult = getArrowForOp(e2.op).make(f2.pos, f2.closingBracket, mergedSig, e2.sub);
-						c1 = c1.and(f.decl().get().in(e1mult));
-						c2 = c2.and(f.decl().get().in(e2mult));
+							c1 = c1.and(e1mult);
+							c2 = c2.and(e2mult);
 						}
 
 						unique1.remove(f1);
@@ -355,11 +357,13 @@ public class ModuleMerger {
 						} else {
 							Expr union = replaceArrows(e1).plus(replaceArrows(e2));
 							f = mergedSig.addField(f1.label, union);
-														
-//						Expr e1mult = ExprBinary.Op.ARROW.make(f1.pos, f1.closingBracket, mergedSig, e1);
-//						Expr e2mult = ExprBinary.Op.ARROW.make(f2.pos, f2.closingBracket, mergedSig, e2);
-//						c1 = c1.and(f.decl().get().in(e1mult));
-//						c2 = c2.and(f.decl().get().in(e2mult));
+
+							Decl ths = mergedSig.decl; 
+							Expr e1mult = ExprQt.Op.ALL.make(f1.pos, f1.closingBracket, List.of(ths), ths.get().join(f).in(e1));
+							Expr e2mult = ExprQt.Op.ALL.make(f2.pos, f2.closingBracket, List.of(ths), ths.get().join(f).in(e2));
+							
+							c1 = c1.and(e1mult);
+							c2 = c2.and(e2mult);
 						}
 
 						unique1.remove(f1);
@@ -772,7 +776,7 @@ public class ModuleMerger {
 	 * @return
 	 */
 	private static Expr generateSigAttributeConstraints(Sig s, Sig old, InheritanceUtil iu, Expr c) {
-		
+
 		if (old.isAbstract != null && s.isAbstract == null) {
 			// without inheritance, abstract has no impact
 			if (iu.getSubSigs(old) != null) {
@@ -816,17 +820,16 @@ public class ModuleMerger {
 	}
 
 	/**
-	 * a run command diffing the two original commands 
+	 * a run command diffing the two original commands
 	 * 
 	 * @param v1
 	 * @param v2
 	 * @return
 	 */
 	public static Command generateDiffCommand(Module v1, Module v2) {
-		
+
 		Command cmd1 = v1.getAllCommands().get(0);
 		Command cmd2 = v2.getAllCommands().get(0);
-		
 
 		int overall = Math.max(cmd1.overall, cmd2.overall);
 		overall = Math.max(overall, 4); // FIXME not needed if inheritance scope is taken into account
@@ -835,16 +838,16 @@ public class ModuleMerger {
 
 		c1 = c1.and(replaceSigRefs(cmd1.formula, true));
 		c2 = c2.and(replaceSigRefs(cmd2.formula, false));
-		
+
 		Command cmd = new Command(false, overall, bitwidth, maxseq, c2.and(c1.not()));
 
-		for (Sig s: sigs.values()) {			
+		for (Sig s : sigs.values()) {
 			CommandScope s1 = cmd1.getScope(v1Sigs.get(s.label));
 			CommandScope s2 = cmd2.getScope(v2Sigs.get(s.label));
-						
+
 			int scope = -1;
 			boolean exact = false;
-			
+
 			// take scope from v1
 			if (s1 != null) {
 				scope = Math.max(scope, s1.endingScope);
@@ -855,52 +858,50 @@ public class ModuleMerger {
 				scope = Math.max(scope, s2.endingScope);
 				exact |= s2.isExact;
 			}
-			
+
 			// FIXME take inheritance scopes into account
-			
+
 			if (scope != -1) {
 				cmd = cmd.change(s, exact, scope);
 			}
-			
-			if (cmd1.additionalExactScopes.contains(v1Sigs.get(s.label)) ||
-					cmd2.additionalExactScopes.contains(v2Sigs.get(s.label))) {
+
+			if (cmd1.additionalExactScopes.contains(v1Sigs.get(s.label))
+					|| cmd2.additionalExactScopes.contains(v2Sigs.get(s.label))) {
 				List<Sig> exactScopes = new ArrayList<>(cmd.additionalExactScopes);
-				exactScopes.add(s);				
+				exactScopes.add(s);
 				cmd = cmd.change(exactScopes.toArray(new Sig[] {}));
 			}
 		}
 
-
 //		return new Command(false, -1, -1, -1, c2.and(c1.not()));
 		return cmd;
 	}
-	
+
 	/**
-	 * a run command diffing the two original commands 
+	 * a run command diffing the two original commands
 	 * 
 	 * @param v1
 	 * @param v2
 	 * @return
 	 */
 	public static Command generatePlainDiffCommand(Module v1, Module v2, int scope) {
-		
+
 		Command cmd1 = v1.getAllCommands().get(0);
 		Command cmd2 = v2.getAllCommands().get(0);
-		
+
 		c1 = c1.and(replaceSigRefs(v1.getAllReachableFacts(), true));
 		c2 = c2.and(replaceSigRefs(v2.getAllReachableFacts(), false));
-		
+
 		Command cmd = new Command(false, scope, -1, -1, c2.and(c1.not()));
 
-		for (Sig s: sigs.values()) {			
-			if (cmd1.additionalExactScopes.contains(v1Sigs.get(s.label)) ||
-					cmd2.additionalExactScopes.contains(v2Sigs.get(s.label))) {
+		for (Sig s : sigs.values()) {
+			if (cmd1.additionalExactScopes.contains(v1Sigs.get(s.label))
+					|| cmd2.additionalExactScopes.contains(v2Sigs.get(s.label))) {
 				List<Sig> exactScopes = new ArrayList<>(cmd.additionalExactScopes);
-				exactScopes.add(s);				
+				exactScopes.add(s);
 				cmd = cmd.change(exactScopes.toArray(new Sig[] {}));
 			}
 		}
-
 
 		return cmd;
 	}
