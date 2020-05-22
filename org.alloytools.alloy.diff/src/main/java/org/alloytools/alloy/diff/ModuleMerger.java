@@ -2,11 +2,12 @@ package org.alloytools.alloy.diff;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
 
 import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.ast.Attr;
@@ -21,7 +22,6 @@ import edu.mit.csail.sdg.ast.ExprHasName;
 import edu.mit.csail.sdg.ast.ExprITE;
 import edu.mit.csail.sdg.ast.ExprLet;
 import edu.mit.csail.sdg.ast.ExprList;
-import edu.mit.csail.sdg.ast.ExprList.Op;
 import edu.mit.csail.sdg.ast.ExprQt;
 import edu.mit.csail.sdg.ast.ExprUnary;
 import edu.mit.csail.sdg.ast.ExprVar;
@@ -32,7 +32,6 @@ import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.ast.Sig.PrimSig;
 import edu.mit.csail.sdg.ast.Type;
 import edu.mit.csail.sdg.ast.Type.ProductType;
-import examples.alloy.Lists;
 
 public class ModuleMerger {
 
@@ -84,6 +83,11 @@ public class ModuleMerger {
 	 * workaround for Alloy bug on parsing and predicate pred/totalOrder
 	 */
 	private static boolean inSigFactOfOrd = false;
+	
+	/**
+	 * special flag for overriding signature references in fields when adding them to subsignatures
+	 */
+	private static String sigOverrideForField;
 
 	/**
 	 * Merges signatures from v1 and v2 by creating combined Sigs for common
@@ -183,9 +187,9 @@ public class ModuleMerger {
 			if (s1 != null && s2 != null) {
 				mergeFields(s, v1iu.getAllFields(s1), v2iu.getAllFields(s2));
 			} else if (s1 != null) {
-				addFields(s, v1iu.getAllFields(s1), true);
+				addFieldsOfUniqueSig(s, mapOf(v1iu.getAllFields(s1)), true);
 			} else {
-				addFields(s, v2iu.getAllFields(s2), false);
+				addFieldsOfUniqueSig(s, mapOf(v2iu.getAllFields(s2)), false);
 			}
 		}
 
@@ -198,6 +202,14 @@ public class ModuleMerger {
 		addSignatureFacts(v2, false);
 
 		return sigs.values();
+	}
+
+	private static Map<String, Field> mapOf(Set<Field> allFields) {
+		Map<String, Field> m = new LinkedHashMap<>();
+		for (Field f : allFields) {
+			m.put(f.label, f);
+		}
+		return m;
 	}
 
 	private static void addSignatureFacts(Module orig, boolean inV1) {
@@ -337,10 +349,10 @@ public class ModuleMerger {
 							ExprUnary.Op op = getMergeOp(e1.op, e2.op);
 							f = mergedSig.addField(f1.label, op.make(f1.pos, union));
 
-							Decl ths = mergedSig.decl; 
+							Decl ths = mergedSig.decl;
 							Expr e1mult = ExprQt.Op.ALL.make(f1.pos, f1.closingBracket, List.of(ths), ths.get().join(f).in(e1.sub));
 							Expr e2mult = ExprQt.Op.ALL.make(f2.pos, f2.closingBracket, List.of(ths), ths.get().join(f).in(e2.sub));
-							
+
 							c1 = c1.and(e1mult);
 							c2 = c2.and(e2mult);
 						}
@@ -358,10 +370,10 @@ public class ModuleMerger {
 							Expr union = replaceArrows(e1).plus(replaceArrows(e2));
 							f = mergedSig.addField(f1.label, union);
 
-							Decl ths = mergedSig.decl; 
+							Decl ths = mergedSig.decl;
 							Expr e1mult = ExprQt.Op.ALL.make(f1.pos, f1.closingBracket, List.of(ths), ths.get().join(f).in(e1));
 							Expr e2mult = ExprQt.Op.ALL.make(f2.pos, f2.closingBracket, List.of(ths), ths.get().join(f).in(e2));
-							
+
 							c1 = c1.and(e1mult);
 							c2 = c2.and(e2mult);
 						}
@@ -384,11 +396,34 @@ public class ModuleMerger {
 		}
 	}
 
-	private static void addFields(Sig s, Set<Field> fields, boolean inV1) {
-		List<Decl> names = new ArrayList<>();
-		names.add(s.decl);
-		for (Field f : fields) {
-			s.addField(f.label, replaceSigRefs(f.decl().expr, names, inV1));
+	/**
+	 * adding fields of a unique signature to eihter one version. No need to
+	 * restrict c1 and c2 as instnaces of the signature wouldn't exist
+	 * 
+	 * @param s
+	 * @param fields
+	 * @param inV1
+	 */
+	private static void addFieldsOfUniqueSig(Sig s, Map<String, Field> fields, boolean inV1) {
+		for (String fName : fields.keySet()) {
+			Stack<String> fieldsToAdd = new Stack<>();
+			if (getField(s, fName)==null) {
+				fieldsToAdd.push(fName);
+			}
+			while(!fieldsToAdd.empty()) {
+				Field f = fields.get(fieldsToAdd.peek());
+				try {
+					sigOverrideForField = s.label;
+					s.addField(f.label, replaceSigRefs(f.decl().expr, List.of(s.decl), inV1));
+					sigOverrideForField = null;
+					fieldsToAdd.pop();
+				} catch (RuntimeException e) {
+					if (e.getMessage().contains("Could not find merged field ")) {
+						String missingField = e.getMessage().replace("Could not find merged field ", "");
+						fieldsToAdd.push(missingField);
+					}
+				}				
+			}
 		}
 	}
 
@@ -527,15 +562,16 @@ public class ModuleMerger {
 			return ret;
 		case "Field":
 			Field f = (Field) expr;
+			String sigName = sigOverrideForField !=null?sigOverrideForField:f.sig.label;
 			// check whether we have field expressions to take care of inheritance
-			String key = f.sig.label + "." + f.label;
+			String key = sigName + "." + f.label;
 			if (inV1 && v1FieldExpr.get(key) != null) {
 				return v1FieldExpr.get(key);
 			} else if (!inV1 && v2FieldExpr.get(key) != null) {
 				return v2FieldExpr.get(key);
 			}
 			// return reference to merged field
-			Expr res = getField(sigs.get(f.sig.label), f.label);
+			Expr res = getField(sigs.get(sigName), f.label);
 			if (res == null) {
 				throw new RuntimeException("Could not find merged field " + f.label);
 			}

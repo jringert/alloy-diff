@@ -22,9 +22,10 @@ import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.parser.CompUtil;
 import edu.mit.csail.sdg.translator.A4Solution;
 
-public class ModuleDiffTest {	
-	
-	static String[] sigFolders = new String[] { "misc", "../models-master", "../iAlloy-dataset-master", "../platinum-experiment-data/" };
+public class ModuleDiffTest {
+
+	static String[] sigFolders = new String[] { "misc", "../models-master", "../iAlloy-dataset-master",
+			"../platinum-experiment-data/" };
 //	static String[] sigFolders = new String[] { "misc/fields/fields1.als" };
 //	static String[] sigFolders = new String[] { "misc"};
 //	static String[] sigFolders = new String[] { "misc/quantification/q2.als" };
@@ -43,26 +44,18 @@ public class ModuleDiffTest {
 	@MethodSource("allAlloyFiles")
 	public void diffSelfEmpty(Path f) {
 		System.out.println("diff " + f.toString() + " and empty.als");
-		try {
-			A4Solution ans = ModuleDiff.diff(f.toString(), "misc/empty.als");
-			assertTrue(f.toString() + " had a satisfiable diff with empty module", !ans.satisfiable() || size(ans) == 0);
-		} catch (ErrorType e) {
-			if (e.getMessage().contains("higher-order")) {
-				System.out.println(e.getMessage());
-			} else {
-				throw e;
-			}
-		}
+		A4Solution ans = ModuleDiff.diff(f.toString(), "misc/empty.als");
+		assertTrue(f.toString() + " had a satisfiable diff with empty module", !ans.satisfiable() || size(ans) == 0);
 	}
 
 	@SuppressWarnings("resource")
 	public static Stream<Arguments> allAlloyFiles() throws Exception {
 		Stream<Arguments> allFiles = null;
 		for (String folder : sigFolders) {
-			Stream<Arguments> inThisFolder = 
-			Files
+			Stream<Arguments> inThisFolder = Files
 					.find(Paths.get(folder), Integer.MAX_VALUE,
-							(filePath, fileAttr) -> fileAttr.isRegularFile() && filePath.toString().endsWith(".als")).map(f -> Arguments.of(f));
+							(filePath, fileAttr) -> fileAttr.isRegularFile() && filePath.toString().endsWith(".als"))
+					.map(f -> Arguments.of(f));
 			if (allFiles == null) {
 				allFiles = inThisFolder;
 			} else {
@@ -83,22 +76,14 @@ public class ModuleDiffTest {
 	@MethodSource("allAlloyFiles")
 	public void diffEmptySelf(Path f) {
 		System.out.println("diff empty.als and " + f.toString());
-		A4Solution ans = null;
-		try {
-			ans = ModuleDiff.diff("misc/empty.als", f.toString());
-		} catch (ErrorSyntax e) {
-			if (e.getMessage().contains("File cannot be found")) {
-				return;
-			} else {
-				throw e;
-			}
-		}
-		
+		A4Solution ans = ModuleDiff.diff("misc/empty.als", f.toString());
+
 		if (ans.satisfiable()) {
 			assertTrue("Empty module had an empty diff with " + f.toString(), size(ans) > 0);
 		} else {
 			A4Solution ansF = ModuleDiff.getSolution(f.toString());
-			if (ansF.satisfiable() && !CompUtil.parseEverything_fromFile(null, null, f.toString()).getAllCommands().get(0).check) {
+			if (ansF.satisfiable()
+					&& !CompUtil.parseEverything_fromFile(null, null, f.toString()).getAllCommands().get(0).check) {
 				assertEquals(f.toString(), 0, size(ansF));
 				assertFalse(f.toString(), ans.next().satisfiable());
 			}
@@ -115,7 +100,7 @@ public class ModuleDiffTest {
 		}
 		return size;
 	}
-	
+
 	/**
 	 * Checks whether the empty module has instances that the current one doesn't.
 	 * This could be the case if the current module is unsat by itself (but then the
@@ -127,18 +112,10 @@ public class ModuleDiffTest {
 	@MethodSource("allAlloyFiles")
 	public void diffSelfSelf(Path f) {
 		System.out.println("diff " + f.toString() + " and itself");
-		try {
-			A4Solution ans = ModuleDiff.diff(f.toString(), f.toString());
-			assertTrue(f.toString() + " had a satisfiable diff with itself", !ans.satisfiable());
-		} catch (ErrorType e) {
-			if (e.getMessage().contains("higher-order")) {
-				System.out.println(e.getMessage());
-			} else {
-				throw e;
-			}
-		}
+		A4Solution ans = ModuleDiff.diff(f.toString(), f.toString());
+		assertTrue(f.toString() + " had a satisfiable diff with itself", !ans.satisfiable());
 	}
-	
+
 	@Test
 	public void diffExtends12() {
 		A4Solution ans = ModuleDiff.diff("misc/inheritance/extends1v1.als", "misc/inheritance/extends1v2.als");
@@ -147,7 +124,7 @@ public class ModuleDiffTest {
 		ans = ModuleDiff.diff("misc/inheritance/extends1v2.als", "misc/inheritance/extends1v1.als");
 		assertFalse(ans.satisfiable());
 	}
-	
+
 	@Test
 	public void diffExtends13() {
 		A4Solution ans = ModuleDiff.diff("misc/inheritance/extends1v1.als", "misc/inheritance/extends1v3.als");
@@ -156,7 +133,7 @@ public class ModuleDiffTest {
 		ans = ModuleDiff.diff("misc/inheritance/extends1v3.als", "misc/inheritance/extends1v1.als");
 		assertTrue(ans.satisfiable());
 	}
-	
+
 	@Test
 	public void diffExtends23() {
 		A4Solution ans = ModuleDiff.diff("misc/inheritance/extends1v2.als", "misc/inheritance/extends1v3.als");
@@ -165,16 +142,16 @@ public class ModuleDiffTest {
 		ans = ModuleDiff.diff("misc/inheritance/extends1v3.als", "misc/inheritance/extends1v2.als");
 		assertTrue(ans.satisfiable());
 	}
-	
+
 	@Test
 	public void diffFacts12() {
 		A4Solution ans = ModuleDiff.diff("misc/facts/factV1.als", "misc/facts/factV2.als");
 		assertFalse(ans.satisfiable());
 
 		ans = ModuleDiff.diff("misc/facts/factV2.als", "misc/facts/factV1.als");
-		assertTrue(ans.satisfiable());		
+		assertTrue(ans.satisfiable());
 	}
-	
+
 	@Test
 	public void diffPaper() {
 		// v2 refines v1
@@ -195,16 +172,14 @@ public class ModuleDiffTest {
 		ans = ModuleDiff.diff("misc/paper/v3.als", "misc/paper/v1.als");
 		assertTrue(ans.satisfiable());
 
-		
 		// v2 eq v3
 		ans = ModuleDiff.diff("misc/paper/v2.als", "misc/paper/v3.als");
 		assertFalse(ans.satisfiable());
 
 		ans = ModuleDiff.diff("misc/paper/v3.als", "misc/paper/v3.als");
-		assertFalse(ans.satisfiable());		
+		assertFalse(ans.satisfiable());
 	}
-	
-	
+
 	@Test
 	@Ignore
 	public void diffFarmer() {
@@ -213,5 +188,5 @@ public class ModuleDiffTest {
 //		A4Solution ans = ModuleDiff.diff(farmerFile, farmerFile);
 		assertTrue(ans.satisfiable());
 	}
-	
+
 }
