@@ -15,7 +15,7 @@ import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 public class ModuleDiff {
 
 	private static A4Reporter rep = new A4Reporter() {
-		private boolean quiet = true;
+		private boolean quiet = false;
 
 		@Override
 		public void bound(String msg) {
@@ -104,12 +104,6 @@ public class ModuleDiff {
 		}
 
 		Collection<Sig> sigs = ModuleMerger.mergeSigs(v1, v2);
-		
-		for (Sig s : sigs) {
-			if (s.label.endsWith("/Ord")) {
-				throw new RuntimeException("Ordering not supported.");
-			}
-		}
 
 		Command diffCommand = ModuleMerger.generatePlainDiffCommand(v1, v2, -1);
 

@@ -83,9 +83,10 @@ public class ModuleMerger {
 	 * workaround for Alloy bug on parsing and predicate pred/totalOrder
 	 */
 	private static boolean inSigFactOfOrd = false;
-	
+
 	/**
-	 * special flag for overriding signature references in fields when adding them to subsignatures
+	 * special flag for overriding signature references in fields when adding them
+	 * to subsignatures
 	 */
 	private static String sigOverrideForField;
 
@@ -116,9 +117,15 @@ public class ModuleMerger {
 		// fill look-up tables
 		for (Sig s : v1.getAllReachableUserDefinedSigs()) {
 			v1Sigs.put(s.toString(), s);
+			if (s.label.endsWith("/Ord")) {
+				throw new RuntimeException("Ordering not supported.");
+			}
 		}
 		for (Sig s : v2.getAllReachableUserDefinedSigs()) {
 			v2Sigs.put(s.toString(), s);
+			if (s.label.endsWith("/Ord")) {
+				throw new RuntimeException("Ordering not supported.");
+			}
 		}
 
 		// do merge
@@ -185,7 +192,7 @@ public class ModuleMerger {
 			Sig s1 = v1Sigs.get(sName);
 			Sig s2 = v2Sigs.get(sName);
 			if (s1 != null && s2 != null) {
-				mergeFields(s, v1iu.getAllFields(s1), v2iu.getAllFields(s2));
+				mergeFields(s, mapOf(v1iu.getAllFields(s1)), mapOf(v2iu.getAllFields(s2)));
 			} else if (s1 != null) {
 				addFieldsOfUniqueSig(s, mapOf(v1iu.getAllFields(s1)), true);
 			} else {
@@ -206,8 +213,10 @@ public class ModuleMerger {
 
 	private static Map<String, Field> mapOf(Set<Field> allFields) {
 		Map<String, Field> m = new LinkedHashMap<>();
-		for (Field f : allFields) {
-			m.put(f.label, f);
+		if (allFields != null) {
+			for (Field f : allFields) {
+				m.put(f.label, f);
+			}
 		}
 		return m;
 	}
@@ -305,100 +314,101 @@ public class ModuleMerger {
 	 * TODO: only works for fields of the same arity as a workaround fields with
 	 * lower arity could be padded with a singleton signature. However, this would
 	 * require changing all expressions on fields.
-	 *
-	 * TODO: messes up with field references inside field declarations; check this!
-	 * -- probably fine due to order in which fields are declared and due to
-	 * restrictions in c1 and c2
 	 * 
-	 * FIXME: restrictions for c1 and c2 dont work when they are referencing fields
-	 * (syntactically) New idea: use types to create signature of fields -- looses
-	 * LUP then construct constraints by quantification over instances -> body of
-	 * quantification should follow from field expression
+	 * FIXME the stack could run into a cycle: break the cycle by adding a field
+	 * with its type (no syntactical restriction)
 	 *
 	 * @param mergedSig
 	 * @param fields1
 	 * @param fields2
 	 */
-	private static void mergeFields(Sig mergedSig, Set<Field> fields1, Set<Field> fields2) {
-		Set<Field> unique1 = new LinkedHashSet<Sig.Field>();
-		Set<Field> unique2 = new LinkedHashSet<Sig.Field>();
+	private static void mergeFields(Sig mergedSig, Map<String, Field> fields1, Map<String, Field> fields2) {
+		Set<String> fNames = new LinkedHashSet<String>();
 
-		for (Field f1 : fields1) {
-			unique1.add(f1);
-		}
-		for (Field f2 : fields2) {
-			unique2.add(f2);
-		}
+		fNames.addAll(fields1.keySet());
+		fNames.addAll(fields2.keySet());
 
-		List<Decl> names = new ArrayList<>();
-		names.add(mergedSig.decl);
-
-		for (Field f1 : fields1) {
-			for (Field f2 : fields2) {
-				if (f1.label.equals(f2.label)) {
-					// FIXME the following check is likely too heuristic, there might be a unary
-					// expression containing further arrows
-					if (f1.decl().expr instanceof ExprUnary && f2.decl().expr instanceof ExprUnary) {
-						ExprUnary e1 = (ExprUnary) replaceSigRefs(f1.decl().expr, names, true);
-						ExprUnary e2 = (ExprUnary) replaceSigRefs(f2.decl().expr, names, false);
-						Field f;
-						if (e1.isSame(e2)) {
-							f = mergedSig.addField(f1.label, e1.op.make(f1.pos, e1.sub));
-						} else {
-							Expr union = e1.sub.plus(e2.sub);
-							ExprUnary.Op op = getMergeOp(e1.op, e2.op);
-							f = mergedSig.addField(f1.label, op.make(f1.pos, union));
-
-							Decl ths = mergedSig.decl;
-							Expr e1mult = ExprQt.Op.ALL.make(f1.pos, f1.closingBracket, List.of(ths), ths.get().join(f).in(e1.sub));
-							Expr e2mult = ExprQt.Op.ALL.make(f2.pos, f2.closingBracket, List.of(ths), ths.get().join(f).in(e2.sub));
-
-							c1 = c1.and(e1mult);
-							c2 = c2.and(e2mult);
+		for (String fName : fNames) {
+			Stack<String> fieldsToAdd = new Stack<>();
+			if (getField(mergedSig, fName) == null) {
+				fieldsToAdd.push(fName);
+			}
+			while (!fieldsToAdd.empty()) {
+				String nextField = fieldsToAdd.peek();
+				if (getField(mergedSig, nextField) == null) {
+					try {
+						sigOverrideForField = mergedSig.label;
+						mergeField(mergedSig, fields1.get(nextField), fields2.get(nextField));
+						sigOverrideForField = null;
+						fieldsToAdd.pop();
+					} catch (RuntimeException e) {
+						if (e.getMessage().contains("Could not find merged field ")) {
+							String missingField = e.getMessage().replace("Could not find merged field ", "");
+							fieldsToAdd.push(missingField);
 						}
-
-						unique1.remove(f1);
-						unique2.remove(f2);
-						break;
-					} else if (f1.decl().expr instanceof ExprBinary && f2.decl().expr instanceof ExprBinary) {
-						Expr e1 = replaceSigRefs(f1.decl().expr, names, true);
-						Expr e2 = replaceSigRefs(f2.decl().expr, names, false);
-						Field f;
-						if (e1.isSame(e2)) {
-							f = mergedSig.addField(f1.label, e1);
-						} else {
-							Expr union = replaceArrows(e1).plus(replaceArrows(e2));
-							f = mergedSig.addField(f1.label, union);
-
-							Decl ths = mergedSig.decl;
-							Expr e1mult = ExprQt.Op.ALL.make(f1.pos, f1.closingBracket, List.of(ths), ths.get().join(f).in(e1));
-							Expr e2mult = ExprQt.Op.ALL.make(f2.pos, f2.closingBracket, List.of(ths), ths.get().join(f).in(e2));
-
-							c1 = c1.and(e1mult);
-							c2 = c2.and(e2mult);
-						}
-
-						unique1.remove(f1);
-						unique2.remove(f2);
-
-					} else {
-						throw new RuntimeException("Mix of field arities " + f1.pos);
 					}
+				} else {
+					fieldsToAdd.pop();
 				}
 			}
 		}
 
-		for (Field f : unique1) {
-			addUniqueField(mergedSig, f, true);
-		}
-		for (Field f : unique2) {
-			addUniqueField(mergedSig, f, false);
+	}
+
+	private static void mergeField(Sig mergedSig, Field f1, Field f2) {
+		List<Decl> names = new ArrayList<>();
+		names.add(mergedSig.decl);
+
+		if (f1 != null && f2 != null) { // field is in both versions
+			if (f1.decl().expr instanceof ExprUnary && f2.decl().expr instanceof ExprUnary) { // unary fields
+				ExprUnary e1 = (ExprUnary) replaceSigRefs(f1.decl().expr, names, true);
+				ExprUnary e2 = (ExprUnary) replaceSigRefs(f2.decl().expr, names, false);
+				Field f;
+				if (e1.isSame(e2)) {
+					f = mergedSig.addField(f1.label, e1.op.make(f1.pos, e1.sub));
+				} else {
+					Expr union = e1.sub.plus(e2.sub);
+					ExprUnary.Op op = getMergeOp(e1.op, e2.op);
+					f = mergedSig.addField(f1.label, op.make(f1.pos, union));
+
+					Decl ths = mergedSig.decl;
+					Expr e1mult = ExprQt.Op.ALL.make(f1.pos, f1.closingBracket, List.of(ths), ths.get().join(f).in(e1));
+					Expr e2mult = ExprQt.Op.ALL.make(f2.pos, f2.closingBracket, List.of(ths), ths.get().join(f).in(e2));
+
+					c1 = c1.and(e1mult);
+					c2 = c2.and(e2mult);
+				}
+			} else if (f1.decl().expr instanceof ExprBinary && f2.decl().expr instanceof ExprBinary) { // relational fields
+				Expr e1 = replaceSigRefs(f1.decl().expr, names, true);
+				Expr e2 = replaceSigRefs(f2.decl().expr, names, false);
+				Field f;
+				if (e1.isSame(e2)) {
+					f = mergedSig.addField(f1.label, e1);
+				} else {
+					Expr union = replaceArrows(e1).plus(replaceArrows(e2));
+					f = mergedSig.addField(f1.label, union);
+
+					Decl ths = mergedSig.decl;
+					Expr e1mult = ExprQt.Op.ALL.make(f1.pos, f1.closingBracket, List.of(ths), ths.get().join(f).in(e1));
+					Expr e2mult = ExprQt.Op.ALL.make(f2.pos, f2.closingBracket, List.of(ths), ths.get().join(f).in(e2));
+
+					c1 = c1.and(e1mult);
+					c2 = c2.and(e2mult);
+				}
+			} else {
+				throw new RuntimeException("Mix of field arities " + f1.pos);
+			}
+		} else if (f1 != null) {
+			addUniqueField(mergedSig, f1, true);
+		} else if (f2 != null) {
+			addUniqueField(mergedSig, f2, false);
 		}
 	}
 
 	/**
-	 * adding fields of a unique signature to eihter one version. No need to
-	 * restrict c1 and c2 as instnaces of the signature wouldn't exist
+	 * adding fields of a unique signature of eihter one version. No need to
+	 * restrict c1 and c2 as instnaces of the signature wouldn't exist in the other
+	 * version
 	 * 
 	 * @param s
 	 * @param fields
@@ -407,26 +417,41 @@ public class ModuleMerger {
 	private static void addFieldsOfUniqueSig(Sig s, Map<String, Field> fields, boolean inV1) {
 		for (String fName : fields.keySet()) {
 			Stack<String> fieldsToAdd = new Stack<>();
-			if (getField(s, fName)==null) {
+			if (getField(s, fName) == null) {
 				fieldsToAdd.push(fName);
 			}
-			while(!fieldsToAdd.empty()) {
-				Field f = fields.get(fieldsToAdd.peek());
-				try {
-					sigOverrideForField = s.label;
-					s.addField(f.label, replaceSigRefs(f.decl().expr, List.of(s.decl), inV1));
-					sigOverrideForField = null;
-					fieldsToAdd.pop();
-				} catch (RuntimeException e) {
-					if (e.getMessage().contains("Could not find merged field ")) {
-						String missingField = e.getMessage().replace("Could not find merged field ", "");
-						fieldsToAdd.push(missingField);
+			while (!fieldsToAdd.empty()) {
+				String nextField = fieldsToAdd.peek();
+				if (getField(s, nextField) == null) {
+					Field f = fields.get(nextField);
+					try {
+						sigOverrideForField = s.label;
+						s.addField(f.label, replaceSigRefs(f.decl().expr, List.of(s.decl), inV1));
+						sigOverrideForField = null;
+						fieldsToAdd.pop();
+					} catch (RuntimeException e) {
+						if (e.getMessage() != null && e.getMessage().contains("Could not find merged field ")) {
+							String missingField = e.getMessage().replace("Could not find merged field ", "");
+							fieldsToAdd.push(missingField);
+						} else {
+							throw e;
+						}
 					}
-				}				
+				} else {
+					fieldsToAdd.pop();
+				}
 			}
 		}
 	}
 
+	/**
+	 * adds a field to a common signature that only exists in v1 or v2 but not in
+	 * both
+	 * 
+	 * @param mergedSig
+	 * @param field
+	 * @param inC1
+	 */
 	private static void addUniqueField(Sig mergedSig, Field field, boolean inC1) {
 		List<Decl> names = new ArrayList<>();
 		names.add(mergedSig.decl);
@@ -434,29 +459,26 @@ public class ModuleMerger {
 		Field f;
 		Expr e = replaceSigRefs(field.decl().expr, names, inC1);
 		if (e instanceof ExprUnary) {
-			ExprUnary.Op op = getMergeOp(((ExprUnary) e).op, ExprUnary.Op.SETOF);
+			ExprUnary.Op op = getMergeOp(((ExprUnary) e).op, ExprUnary.Op.NO);
 			f = mergedSig.addField(field.label, op.make(field.pos, ((ExprUnary) e).sub));
+			Decl ths = mergedSig.decl;
 			if (inC1) {
-				Expr e1mult = getArrowForOp(((ExprUnary) e).op).make(field.pos, field.closingBracket, mergedSig,
-						((ExprUnary) e).sub);
+				Expr e1mult = ExprQt.Op.ALL.make(field.pos, field.closingBracket, List.of(ths), ths.get().join(f).in(e));
 				c1 = c1.and(f.decl().get().in(e1mult));
+
 				c2 = c2.and(f.decl().get().no());
 			} else {
 				c1 = c1.and(f.decl().get().no());
-				Expr e2mult = getArrowForOp(((ExprUnary) e).op).make(field.pos, field.closingBracket, mergedSig,
-						((ExprUnary) e).sub);
+
+				Expr e2mult = ExprQt.Op.ALL.make(field.pos, field.closingBracket, List.of(ths), ths.get().join(f).in(e));
 				c2 = c2.and(f.decl().get().in(e2mult));
 			}
 		} else if (e instanceof ExprBinary) {
 			f = mergedSig.addField(field.label, e);
 			if (inC1) {
-				Expr e1mult = ExprBinary.Op.ARROW.make(field.pos, field.closingBracket, mergedSig, e);
-				c1 = c1.and(f.decl().get().in(e1mult));
 				c2 = c2.and(f.decl().get().no());
 			} else {
 				c1 = c1.and(f.decl().get().no());
-				Expr e2mult = ExprBinary.Op.ARROW.make(field.pos, field.closingBracket, mergedSig, e);
-				c2 = c2.and(f.decl().get().in(e2mult));
 			}
 		}
 	}
@@ -500,7 +522,7 @@ public class ModuleMerger {
 		case "PrimSig":
 			PrimSig ps = (PrimSig) expr;
 			// workaround for totalOrder bug
-			if (inSigFactOfOrd && ps.label.equals("ordering/Ord")) {
+			if (inSigFactOfOrd && ps.label.endsWith("/Ord")) {
 				for (Decl d : names) {
 					for (ExprHasName n : d.names) {
 						if (n.label.equals("this")) {
@@ -552,8 +574,6 @@ public class ModuleMerger {
 				}
 			}
 			Type t = ev.type();
-			// FIXME figure out how to correctly use the this reference in signatures where
-			// one field references the ohter
 			if (ev.label.equals("this")) {
 				System.err.println("FIXME");
 				return getExprVarToSig(ev);
@@ -562,7 +582,7 @@ public class ModuleMerger {
 			return ret;
 		case "Field":
 			Field f = (Field) expr;
-			String sigName = sigOverrideForField !=null?sigOverrideForField:f.sig.label;
+			String sigName = sigOverrideForField != null ? sigOverrideForField : f.sig.label;
 			// check whether we have field expressions to take care of inheritance
 			String key = sigName + "." + f.label;
 			if (inV1 && v1FieldExpr.get(key) != null) {
@@ -759,6 +779,8 @@ public class ModuleMerger {
 				return ExprUnary.Op.SETOF;
 			case LONEOF:
 				return ExprUnary.Op.SETOF;
+			case NO:
+				return ExprUnary.Op.SETOF;
 			default:
 				// this covers both the some and the one operator
 				return ExprUnary.Op.SOMEOF;
@@ -781,25 +803,30 @@ public class ModuleMerger {
 				return ExprUnary.Op.SOMEOF;
 			case LONEOF:
 				return ExprUnary.Op.LONEOF;
+			case NO:
+				return ExprUnary.Op.LONEOF;
 			default:
 				// this covers the one operator
 				return ExprUnary.Op.ONEOF;
 			}
+		case NO:
+			switch (op2) {
+			case SETOF:
+				return ExprUnary.Op.SETOF;
+			case SOMEOF:
+				return ExprUnary.Op.SETOF;
+			case LONEOF:
+				return ExprUnary.Op.LONEOF;
+			case NO:
+				return ExprUnary.Op.NO;
+			case ONEOF:
+				return ExprUnary.Op.LONEOF;
+			default:
+				// this covers the one operator
+				return ExprUnary.Op.NO;
+			}
 		default:
 			return ExprUnary.Op.SETOF;
-		}
-	}
-
-	private static ExprBinary.Op getArrowForOp(ExprUnary.Op op) {
-		switch (op) {
-		case ONEOF:
-			return ExprBinary.Op.ANY_ARROW_ONE;
-		case SOMEOF:
-			return ExprBinary.Op.ANY_ARROW_SOME;
-		case LONEOF:
-			return ExprBinary.Op.ANY_ARROW_LONE;
-		default:
-			return ExprBinary.Op.ARROW;
 		}
 	}
 
