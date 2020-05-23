@@ -21,7 +21,7 @@ import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 
 class CheckSolutionTest {
 
-	static String[] sigFolders = new String[] { "../org.alloytools.alloy.diff/misc", "../org.alloytools.alloy.extra/extra/models/examples", "../models-master", "../iAlloy-dataset-master" };
+	static String[] sigFolders = new String[] { "../org.alloytools.alloy.diff/misc", "../models-master", "../iAlloy-dataset-master", "../platinum-experiment-data/" };
 
 	public static Stream<Arguments> allAlloyFiles() throws Exception {
 		Stream<Arguments> allFiles = null;
