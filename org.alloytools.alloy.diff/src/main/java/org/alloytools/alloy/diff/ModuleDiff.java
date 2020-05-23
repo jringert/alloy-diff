@@ -13,9 +13,11 @@ import edu.mit.csail.sdg.translator.A4Solution;
 import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 
 public class ModuleDiff {
+	public static int totalVarsSAT = 0;
 
-	private static A4Reporter rep = new A4Reporter() {
-		private boolean quiet = true;
+	public static A4Reporter rep = new A4Reporter() {
+		private boolean quiet = false;
+		
 
 		@Override
 		public void bound(String msg) {
@@ -45,6 +47,7 @@ public class ModuleDiff {
 
 		@Override
 		public void solve(int primaryVars, int totalVars, int clauses) {
+			totalVarsSAT = totalVars;
 			if (!quiet) {
 				System.out.print(totalVars + " vars. " + primaryVars + " primary vars. " + clauses + " clauses.");
 				System.out.flush();
@@ -78,14 +81,18 @@ public class ModuleDiff {
 	 * @param rightFile
 	 * @return
 	 */
-	public static A4Solution diff(String leftFile, String rightFile) {
+	public static A4Solution diff(String leftFile, String rightFile, int scope) {
 
 		Module v1, v2;
 
 		v1 = CompUtil.parseEverything_fromFile(rep, null, leftFile);
 		v2 = CompUtil.parseEverything_fromFile(rep, null, rightFile);
 
-		return diff(v1, v2);
+		return diff(v1, v2, scope);
+	}
+	
+	public static A4Solution diff(String leftFile, String rightFile) {
+		return diff(leftFile, rightFile, -1);
 	}
 
 	/**
@@ -95,7 +102,7 @@ public class ModuleDiff {
 	 * @param v2
 	 * @return
 	 */
-	private static A4Solution diff(Module v1, Module v2) {
+	private static A4Solution diff(Module v1, Module v2, int scope) {
 
 		if (System.getProperty("os.name").contains("indows")) {
 			options.solver = A4Options.SatSolver.SAT4J;
@@ -105,7 +112,7 @@ public class ModuleDiff {
 
 		Collection<Sig> sigs = ModuleMerger.mergeSigs(v1, v2);
 
-		Command diffCommand = ModuleMerger.generatePlainDiffCommand(v1, v2, -1);
+		Command diffCommand = ModuleMerger.generatePlainDiffCommand(v1, v2, scope);
 
 		A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, sigs, diffCommand, options);
 

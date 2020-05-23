@@ -997,7 +997,44 @@ public class ModuleMerger {
 
 		c1 = c1.and(replaceSigRefs(v1.getAllReachableFacts(), true));
 		c2 = c2.and(replaceSigRefs(v2.getAllReachableFacts(), false));
-
+		
+		if (scope == -1) {
+			scope = 3;
+		}
+		for (Sig parent : v1iu.getParentSigs()) {
+			Expr union = null;
+			for (Sig child : v1iu.getSubSigs(parent)) {
+				Sig s = sigs.get(child.label);
+				if (s != null) {
+					if (union == null) {
+						union = s;
+					} else {
+						union = union.plus(s);
+					}					
+				}
+			}
+			if (union != null) {
+				c1 = c1.and(union.cardinality().lte(ExprConstant.makeNUMBER(scope)));
+			}
+		}		
+		for (Sig parent : v2iu.getParentSigs()) {
+			Expr union = null;
+			for (Sig child : v2iu.getSubSigs(parent)) {
+				Sig s = sigs.get(child.label);
+				if (s != null) {
+					if (union == null) {
+						union = s;
+					} else {
+						union = union.plus(s);
+					}					
+				}
+			}
+			if (union != null) {
+				c2 = c2.and(union.cardinality().lte(ExprConstant.makeNUMBER(scope)));
+			}
+		}
+		
+		
 		Command cmd = new Command(false, scope, -1, -1, c2.and(c1.not()));
 
 		for (Sig s : sigs.values()) {
