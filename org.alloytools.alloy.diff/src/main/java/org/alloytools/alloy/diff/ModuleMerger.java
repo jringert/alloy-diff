@@ -131,7 +131,7 @@ public class ModuleMerger {
 
 		// do merge
 		for (String sName : v1Sigs.keySet()) {
-			if (v2Sigs.containsKey(sName)) {
+			if (v2Sigs.containsKey(sName) && ! (v2Sigs.get(sName) instanceof SubsetSig)) {
 				// create a merged signature
 				Sig s1 = v1Sigs.get(sName);
 				Sig s2 = v2Sigs.get(sName);
@@ -163,7 +163,7 @@ public class ModuleMerger {
 			}
 		}
 		for (String sName : v2Sigs.keySet()) {
-			if (!v1Sigs.containsKey(sName)) {
+			if (!v1Sigs.containsKey(sName) || v1Sigs.get(sName) instanceof SubsetSig) {
 				Sig old = v2Sigs.get(sName);
 				// adding signatures that are unique in v2
 				if (old instanceof PrimSig) {
@@ -203,7 +203,7 @@ public class ModuleMerger {
 
 		for (String sName : sigs.keySet()) {
 			Sig s = sigs.get(sName);
-			// TODO check what happens to subsignatures
+			// TODO inheritance util should add fields of subset sigs as optional fields
 			Sig s1 = v1Sigs.get(sName);
 			Sig s2 = v2Sigs.get(sName);
 			if (s1 != null && s2 != null) {
@@ -504,14 +504,14 @@ public class ModuleMerger {
 			Decl ths = mergedSig.decl;
 			if (inC1) {
 				Expr e1mult = ExprQt.Op.ALL.make(field.pos, field.closingBracket, List.of(ths), ths.get().join(f).in(e));
-				c1 = c1.and(f.decl().get().in(e1mult));
+				c1 = c1.and(e1mult);
 
 				c2 = c2.and(f.decl().get().no());
 			} else {
 				c1 = c1.and(f.decl().get().no());
 
 				Expr e2mult = ExprQt.Op.ALL.make(field.pos, field.closingBracket, List.of(ths), ths.get().join(f).in(e));
-				c2 = c2.and(f.decl().get().in(e2mult));
+				c2 = c2.and(e2mult);
 			}
 		} else if (e instanceof ExprBinary) {
 			f = mergedSig.addField(field.label, e);
@@ -999,6 +999,35 @@ public class ModuleMerger {
 		c2 = c2.and(replaceSigRefs(v2.getAllReachableFacts(), false));
 
 		Command cmd = new Command(false, scope, -1, -1, c2.and(c1.not()));
+
+		for (Sig s : sigs.values()) {
+			if (cmd1.additionalExactScopes.contains(v1Sigs.get(s.label))
+					|| cmd2.additionalExactScopes.contains(v2Sigs.get(s.label))) {
+				List<Sig> exactScopes = new ArrayList<>(cmd.additionalExactScopes);
+				exactScopes.add(s);
+				cmd = cmd.change(exactScopes.toArray(new Sig[] {}));
+			}
+		}
+
+		return cmd;
+	}
+	
+	/**
+	 * a run command diffing the two original commands
+	 * 
+	 * @param v1
+	 * @param v2
+	 * @return
+	 */
+	public static Command generatePlainConjunctionCommand(Module v1, Module v2, int scope) {
+
+		Command cmd1 = v1.getAllCommands().get(0);
+		Command cmd2 = v2.getAllCommands().get(0);
+
+		c1 = c1.and(replaceSigRefs(v1.getAllReachableFacts(), true));
+		c2 = c2.and(replaceSigRefs(v2.getAllReachableFacts(), false));
+
+		Command cmd = new Command(false, scope, -1, -1, c1.and(c2));
 
 		for (Sig s : sigs.values()) {
 			if (cmd1.additionalExactScopes.contains(v1Sigs.get(s.label))

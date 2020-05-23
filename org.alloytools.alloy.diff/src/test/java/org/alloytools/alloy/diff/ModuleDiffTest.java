@@ -27,7 +27,7 @@ public class ModuleDiffTest {
 	static String[] sigFolders = new String[] { "misc", "../models-master", "../iAlloy-dataset-master",
 			"../platinum-experiment-data/" };
 //	static String[] sigFolders = new String[] { "misc/fields/fields1.als" };
-//	static String[] sigFolders = new String[] { "misc"};
+//	static String[] sigFolders = new String[] { "../platinum-experiment-data/"};
 //	static String[] sigFolders = new String[] { "misc/quantification/q2.als" };
 //	static String[] sigFolders = new String[] { "misc/ordering.als" };
 //	static String[] sigFolders = new String[] { "misc/enum/enum1.als" };
@@ -113,9 +113,26 @@ public class ModuleDiffTest {
 	public void diffSelfSelf(Path f) {
 		System.out.println("diff " + f.toString() + " and itself");
 		A4Solution ans = ModuleDiff.diff(f.toString(), f.toString());
-		assertTrue(f.toString() + " had a satisfiable diff with itself", !ans.satisfiable());
+		assertFalse(f.toString() + " had a satisfiable diff with itself", ans.satisfiable());
 	}
 
+	public static Path previous = null;
+	
+	@ParameterizedTest
+	@MethodSource("allAlloyFiles")
+	public void diffPreviousSelf(Path f) {
+		if (previous != null) {
+			System.out.println("diff " + previous.toString() + " and " + f.toString());
+			try {
+				ModuleDiff.diff(previous.toString(), f.toString());
+			} catch (Exception e) {
+				previous = f;
+				throw e;
+			}
+		}
+		previous = f;
+	}
+	
 	@Test
 	public void diffExtends12() {
 		A4Solution ans = ModuleDiff.diff("misc/inheritance/extends1v1.als", "misc/inheritance/extends1v2.als");
@@ -181,11 +198,11 @@ public class ModuleDiffTest {
 	}
 
 	@Test
-	@Ignore
+//	@Ignore
 	public void diffFarmer() {
 		String farmerFile = "../iAlloy-dataset-master/mutant_version_set/farmer/v1/farmer.als";
-		A4Solution ans = ModuleDiff.diff("misc/empty.als", farmerFile);
-//		A4Solution ans = ModuleDiff.diff(farmerFile, farmerFile);
+//		A4Solution ans = ModuleDiff.diff("misc/empty.als", farmerFile);
+		A4Solution ans = ModuleDiff.diff(farmerFile, farmerFile);
 		assertTrue(ans.satisfiable());
 	}
 
