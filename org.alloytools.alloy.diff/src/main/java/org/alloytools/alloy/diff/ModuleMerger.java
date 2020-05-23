@@ -30,6 +30,7 @@ import edu.mit.csail.sdg.ast.Module;
 import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.ast.Sig.PrimSig;
+import edu.mit.csail.sdg.ast.Sig.SubsetSig;
 import edu.mit.csail.sdg.ast.Type;
 import edu.mit.csail.sdg.ast.Type.ProductType;
 
@@ -186,6 +187,20 @@ public class ModuleMerger {
 		buildInheritanceSigExpr(v1, v1iu, v1SigExpr);
 		buildInheritanceSigExpr(v2, v2iu, v2SigExpr);
 
+		// add subset signatures
+		for (Sig s : v1Sigs.values()) {
+			if (s instanceof SubsetSig) {
+				SubsetSig sv1 = new SubsetSig(s.label + "_v1", getParentSigs((SubsetSig) s, v1iu));
+				sigs.put(s.label + "_v1", sv1);
+			}
+		}
+		for (Sig s : v2Sigs.values()) {
+			if (s instanceof SubsetSig) {
+				SubsetSig sv2 = new SubsetSig(s.label + "_v2", getParentSigs((SubsetSig) s, v2iu));
+				sigs.put(s.label + "_v2", sv2);
+			}
+		}
+
 		for (String sName : sigs.keySet()) {
 			Sig s = sigs.get(sName);
 			// TODO check what happens to subsignatures
@@ -209,6 +224,31 @@ public class ModuleMerger {
 		addSignatureFacts(v2, false);
 
 		return sigs.values();
+	}
+
+	/**
+	 * calculates the merged singatures from sigs corresponding to the parent
+	 * signatures of this subset sig
+	 * 
+	 * @param s
+	 * @param iu
+	 * @return
+	 */
+	private static Collection<Sig> getParentSigs(SubsetSig s, InheritanceUtil iu) {
+		Set<Sig> parents = new LinkedHashSet<>();
+		if (sigs.containsKey(s.label)) {
+			parents.add(sigs.get(s.label));
+		}
+		for (Sig pV : s.parents) {
+			if (iu.getSubSigs(pV) != null) {
+				for (Sig c : iu.getSubSigs(pV)) {
+					if (sigs.containsKey(c.label)) {
+						parents.add(sigs.get(c.label));
+					}
+				}
+			}
+		}
+		return parents;
 	}
 
 	private static Map<String, Field> mapOf(Set<Field> allFields) {
@@ -546,6 +586,9 @@ public class ModuleMerger {
 				}
 			}
 			return s;
+		case "SubsetSig":
+			SubsetSig sub = (SubsetSig) expr;
+			return sigs.get(sub.label + (inV1?"_v1":"_v2"));
 		case "ExprList":
 			ExprList el = (ExprList) expr;
 			List<Expr> l = new ArrayList<Expr>();

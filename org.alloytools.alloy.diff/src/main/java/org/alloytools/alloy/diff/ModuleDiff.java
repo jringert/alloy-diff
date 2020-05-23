@@ -15,7 +15,7 @@ import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 public class ModuleDiff {
 
 	private static A4Reporter rep = new A4Reporter() {
-		private boolean quiet = false;
+		private boolean quiet = true;
 
 		@Override
 		public void bound(String msg) {
