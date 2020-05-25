@@ -1001,11 +1001,15 @@ public class ModuleMerger {
 		if (scope == -1) {
 			scope = 3;
 		}
-		for (Sig parent : v1iu.getParentSigs()) {
+		for (Sig parent : v1iu.getParentSigs()) {			
 			Expr union = null;
+			int ones = 0;
 			for (Sig child : v1iu.getSubSigs(parent)) {
 				Sig s = sigs.get(child.label);
 				if (s != null) {
+					if (s.isOne != null) {
+						ones++;
+					}
 					if (union == null) {
 						union = s;
 					} else {
@@ -1014,7 +1018,7 @@ public class ModuleMerger {
 				}
 			}
 			if (union != null) {
-				c1 = c1.and(union.cardinality().lte(ExprConstant.makeNUMBER(scope)));
+				c1 = c1.and(union.cardinality().lte(ExprConstant.makeNUMBER(Math.max(ones, scope))));
 			}
 		}		
 		for (Sig parent : v2iu.getParentSigs()) {
@@ -1035,7 +1039,7 @@ public class ModuleMerger {
 		}
 		
 		
-		Command cmd = new Command(false, scope, -1, -1, c2.and(c1.not()));
+		Command cmd = new Command(false, scope, 7, -1, c2.and(c1.not()));
 
 		for (Sig s : sigs.values()) {
 			if (cmd1.additionalExactScopes.contains(v1Sigs.get(s.label))
@@ -1065,6 +1069,68 @@ public class ModuleMerger {
 		c2 = c2.and(replaceSigRefs(v2.getAllReachableFacts(), false));
 
 		Command cmd = new Command(false, scope, -1, -1, c1.and(c2));
+
+		for (Sig s : sigs.values()) {
+			if (cmd1.additionalExactScopes.contains(v1Sigs.get(s.label))
+					|| cmd2.additionalExactScopes.contains(v2Sigs.get(s.label))) {
+				List<Sig> exactScopes = new ArrayList<>(cmd.additionalExactScopes);
+				exactScopes.add(s);
+				cmd = cmd.change(exactScopes.toArray(new Sig[] {}));
+			}
+		}
+
+		return cmd;
+	}
+
+	public static Command generatePredDiffCommand(Module v1, Module v2, int scope) {
+		Command cmd1 = v1.getAllCommands().get(0);
+		Command cmd2 = v2.getAllCommands().get(0);
+
+		c1 = c1.and(replaceSigRefs(cmd1.formula, true));
+		c2 = c2.and(replaceSigRefs(cmd2.formula, false));
+		
+		if (scope == -1) {
+			scope = 3;
+		}
+		for (Sig parent : v1iu.getParentSigs()) {			
+			Expr union = null;
+			int ones = 0;
+			for (Sig child : v1iu.getSubSigs(parent)) {
+				Sig s = sigs.get(child.label);
+				if (s != null) {
+					if (s.isOne != null) {
+						ones++;
+					}
+					if (union == null) {
+						union = s;
+					} else {
+						union = union.plus(s);
+					}					
+				}
+			}
+			if (union != null) {
+				c1 = c1.and(union.cardinality().lte(ExprConstant.makeNUMBER(Math.max(ones, scope))));
+			}
+		}		
+		for (Sig parent : v2iu.getParentSigs()) {
+			Expr union = null;
+			for (Sig child : v2iu.getSubSigs(parent)) {
+				Sig s = sigs.get(child.label);
+				if (s != null) {
+					if (union == null) {
+						union = s;
+					} else {
+						union = union.plus(s);
+					}					
+				}
+			}
+			if (union != null) {
+				c2 = c2.and(union.cardinality().lte(ExprConstant.makeNUMBER(scope)));
+			}
+		}
+		
+		
+		Command cmd = new Command(false, scope, 7, -1, c2.and(c1.not()));
 
 		for (Sig s : sigs.values()) {
 			if (cmd1.additionalExactScopes.contains(v1Sigs.get(s.label))

@@ -113,6 +113,7 @@ public class ModuleDiff {
 		Collection<Sig> sigs = ModuleMerger.mergeSigs(v1, v2);
 
 		Command diffCommand = ModuleMerger.generatePlainDiffCommand(v1, v2, scope);
+//		Command diffCommand = ModuleMerger.generatePredDiffCommand(v1, v2, scope);
 
 		A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, sigs, diffCommand, options);
 

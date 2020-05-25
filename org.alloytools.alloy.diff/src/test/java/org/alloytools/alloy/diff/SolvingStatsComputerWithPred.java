@@ -13,9 +13,9 @@ import edu.mit.csail.sdg.translator.A4Options;
 import edu.mit.csail.sdg.translator.A4Solution;
 import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 
-public class SolvingStatsComputer {
+public class SolvingStatsComputerWithPred {
 	static String[] sigFolders = new String[] { 
-//			"../models-master/algorithms/distributed-hashtable",
+			"../models-master/algorithms/distributed-hashtable",
 			"../models-master/software-abstractions-book/appendixA",
 			"../models-master/software-abstractions-book/chapter2",
 			"../models-master/software-abstractions-book/chapter4",
@@ -124,14 +124,16 @@ public class SolvingStatsComputer {
 				
 				long v1time = System.currentTimeMillis();
 				CompModule v1 = CompUtil.parseEverything_fromFile(null, null, previous.toString());
-				Command v1cmd = new Command(false, scope, -1, -1, v1.getAllReachableFacts());
+				Command cmd1 = v1.getAllCommands().get(0);
+				Command v1cmd = new Command(false, scope, -1, -1, cmd1.formula);
 				A4Solution ans1 = TranslateAlloyToKodkod.execute_command(ModuleDiff.rep, v1.getAllReachableUserDefinedSigs(), v1cmd, options);
 				int v1TotalVars = ModuleDiff.totalVarsSAT;
 				v1time = System.currentTimeMillis() - v1time;
 				
 				long v2time = System.currentTimeMillis();
 				CompModule v2 = CompUtil.parseEverything_fromFile(null, null, f.toString());
-				Command v2cmd = new Command(false, scope, -1, -1, v2.getAllReachableFacts());
+				Command cmd2 = v2.getAllCommands().get(0);
+				Command v2cmd = new Command(false, scope, -1, -1, cmd2.formula);
 				A4Solution ans2 = TranslateAlloyToKodkod.execute_command(ModuleDiff.rep, v2.getAllReachableUserDefinedSigs(), v2cmd, options);
 				int v2TotalVars = ModuleDiff.totalVarsSAT;
 				v2time = System.currentTimeMillis() - v2time;
@@ -162,7 +164,7 @@ public class SolvingStatsComputer {
 							ans21.satisfiable() + ";" + 
 							classify(ans12.satisfiable(), ans21.satisfiable(), ans1.satisfiable(), ans2.satisfiable()) + "\r\n";
 					
-					Files.writeString(Paths.get("cnfDiff_" + scope + ".csv"), report, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+					Files.writeString(Paths.get("cnfDiffWithPred_" + scope + ".csv"), report, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
 				}
 				
 			} catch (Exception e) {
