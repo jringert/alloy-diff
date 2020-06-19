@@ -22,6 +22,7 @@ import edu.mit.csail.sdg.ast.ExprHasName;
 import edu.mit.csail.sdg.ast.ExprITE;
 import edu.mit.csail.sdg.ast.ExprLet;
 import edu.mit.csail.sdg.ast.ExprList;
+import edu.mit.csail.sdg.ast.ExprList.Op;
 import edu.mit.csail.sdg.ast.ExprQt;
 import edu.mit.csail.sdg.ast.ExprUnary;
 import edu.mit.csail.sdg.ast.ExprVar;
@@ -114,7 +115,7 @@ public class ModuleMerger {
 		v2Sigs = new LinkedHashMap<>();
 		c1 = ExprConstant.TRUE;
 		c2 = ExprConstant.TRUE;
-
+		
 		// fill look-up tables
 		for (Sig s : v1.getAllReachableUserDefinedSigs()) {
 			v1Sigs.put(s.toString(), s);
@@ -998,6 +999,8 @@ public class ModuleMerger {
 		c1 = c1.and(replaceSigRefs(v1.getAllReachableFacts(), true));
 		c2 = c2.and(replaceSigRefs(v2.getAllReachableFacts(), false));
 		
+		c1 = removeC1conjunctsFromC2(c2, c1);
+		
 		if (scope == -1) {
 			scope = 3;
 		}
@@ -1053,6 +1056,66 @@ public class ModuleMerger {
 		return cmd;
 	}
 	
+
+	private static Expr removeC1conjunctsFromC2(Expr c12, Expr c22) {		
+		Set<Expr> conjunctsC1 = conjuncts(c12);
+		Set<Expr> conjunctsC2 = conjuncts(c22);
+		
+		int size = conjunctsC2.size();
+		
+		conjunctsC2.removeAll(conjunctsC1);
+		
+		Map<String, Set<Expr>> str2ex = new LinkedHashMap<>();
+		for (Expr c : conjunctsC1) {
+			String str = c.toString();
+			Set<Expr> es = str2ex.get(str);
+			if (es == null) {
+				es = new LinkedHashSet<>();
+				str2ex.put(str, es);
+			}
+			es.add(c);
+		}
+		Set<Expr> found = new LinkedHashSet<>();
+		for (Expr e : conjunctsC2) {
+			if (str2ex.get(e.toString()) != null) {
+				for (Expr c : str2ex.get(e.toString())) {
+//					if (e.isSame(c)) {
+						found.add(e);
+//					}
+				}
+			}
+		}
+
+		conjunctsC2.removeAll(found);
+		
+		System.err.println("remove conjuncts from C2 (BASED ON STR EQ): " + (size - conjunctsC2.size()));
+		
+		if (conjunctsC2.isEmpty()) {
+			return ExprConstant.TRUE;
+		}
+		
+		return ExprList.make(null, null, Op.AND, new ArrayList<>(conjunctsC2));
+	}
+
+	private static Set<Expr> conjuncts(Expr e) {
+		Set<Expr> cons = new LinkedHashSet<Expr>(); 
+		if (e instanceof ExprList && ((ExprList) e).op.equals(ExprList.Op.AND)) {
+			ExprList l = (ExprList)e;
+			cons.addAll(l.args);
+		} else if (e instanceof ExprBinary && ((ExprBinary) e).op.equals(ExprBinary.Op.AND)) {
+			ExprBinary b = (ExprBinary)e;
+			cons.add(b.left);
+			cons.add(b.right);
+		} else {
+				return Set.of(e);
+		}
+		Set<Expr> moreCons = new LinkedHashSet<Expr>();
+		for (Expr c : cons) {
+			moreCons.addAll(conjuncts(c));
+		}
+		return moreCons;
+	}
+
 	/**
 	 * a run command diffing the two original commands
 	 * 

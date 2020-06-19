@@ -102,9 +102,8 @@ public class ModuleDiffTest {
 	}
 
 	/**
-	 * Checks whether the empty module has instances that the current one doesn't.
-	 * This could be the case if the current module is unsat by itself (but then the
-	 * instances must be empty).
+	 * Checks whether the current module has instances that it doesn't.
+	 * This should always be false.
 	 * 
 	 * @param f
 	 */

@@ -16,7 +16,7 @@ public class ModuleDiff {
 	public static int totalVarsSAT = 0;
 
 	public static A4Reporter rep = new A4Reporter() {
-		private boolean quiet = false;
+		private boolean quiet = true;
 		
 
 		@Override

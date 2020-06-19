@@ -126,7 +126,7 @@ public final class ExprQt extends Expr {
                     if (!first)
                         out.append(',');
                     first = false;
-                    out.append(v.label);
+                    out.append(v.label + ":" + v.type);
                 }
             if (op != Op.COMPREHENSION || !(sub instanceof ExprConstant) || ((ExprConstant) sub).op != ExprConstant.Op.TRUE) {
                 out.append(" | ");
