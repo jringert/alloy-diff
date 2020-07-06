@@ -26,7 +26,7 @@ public class Compare {
 
 		}
 		
-		ans = ModuleDiff.diff(leftFile, rightFile);
+		ans = ModuleDiff.diff(leftFile, rightFile, true);
 
 		if (ans.satisfiable()) {
 			ans.writeXML("alloy_compare_output.xml");

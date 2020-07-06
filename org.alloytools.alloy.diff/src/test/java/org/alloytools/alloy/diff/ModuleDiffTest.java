@@ -123,7 +123,7 @@ public class ModuleDiffTest {
 		if (previous != null) {
 			System.out.println("diff " + previous.toString() + " and " + f.toString());
 			try {
-				ModuleDiff.diff(previous.toString(), f.toString());
+				ModuleDiff.diff(previous.toString(), f.toString(),10, true);
 			} catch (Exception e) {
 				previous = f;
 				throw e;
@@ -202,6 +202,15 @@ public class ModuleDiffTest {
 		String farmerFile = "../iAlloy-dataset-master/mutant_version_set/farmer/v1/farmer.als";
 //		A4Solution ans = ModuleDiff.diff("misc/empty.als", farmerFile);
 		A4Solution ans = ModuleDiff.diff(farmerFile, farmerFile);
+		assertTrue(ans.satisfiable());
+	}
+	
+	@Test
+//	@Ignore
+	public void diffTransitiveClosure() {
+		String file = "misc/transitiveClosure.als";
+		A4Solution ans = ModuleDiff.diff("misc/empty.als", file, 10, false);
+		ans = ModuleDiff.diff(file, "misc/empty.als");
 		assertTrue(ans.satisfiable());
 	}
 

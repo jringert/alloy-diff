@@ -16,7 +16,7 @@ public class ModuleDiff {
 	public static int totalVarsSAT = 0;
 
 	public static A4Reporter rep = new A4Reporter() {
-		private boolean quiet = true;
+		private boolean quiet = false;
 		
 
 		@Override
@@ -81,19 +81,23 @@ public class ModuleDiff {
 	 * @param rightFile
 	 * @return
 	 */
-	public static A4Solution diff(String leftFile, String rightFile, int scope) {
+	public static A4Solution diff(String leftFile, String rightFile, int scope, boolean withPred) {
 
 		Module v1, v2;
 
 		v1 = CompUtil.parseEverything_fromFile(rep, null, leftFile);
 		v2 = CompUtil.parseEverything_fromFile(rep, null, rightFile);
 
-		return diff(v1, v2, scope);
+		return diff(v1, v2, scope, withPred);
 	}
 	
-	public static A4Solution diff(String leftFile, String rightFile) {
-		return diff(leftFile, rightFile, -1);
+	public static A4Solution diff(String leftFile, String rightFile, boolean withPred) {
+		return diff(leftFile, rightFile, -1, withPred);
 	}
+	public static A4Solution diff(String leftFile, String rightFile) {
+		return diff(leftFile, rightFile, -1, true);
+	}
+
 
 	/**
 	 * Generate a diff (v2 and not v1) as A4Solution.
@@ -102,7 +106,7 @@ public class ModuleDiff {
 	 * @param v2
 	 * @return
 	 */
-	private static A4Solution diff(Module v1, Module v2, int scope) {
+	private static A4Solution diff(Module v1, Module v2, int scope, boolean withPred) {
 
 		if (System.getProperty("os.name").contains("indows")) {
 			options.solver = A4Options.SatSolver.SAT4J;
@@ -112,8 +116,12 @@ public class ModuleDiff {
 
 		Collection<Sig> sigs = ModuleMerger.mergeSigs(v1, v2);
 
-		Command diffCommand = ModuleMerger.generatePlainDiffCommand(v1, v2, scope);
-//		Command diffCommand = ModuleMerger.generatePredDiffCommand(v1, v2, scope);
+		Command diffCommand;
+		if (withPred) {
+			diffCommand = ModuleMerger.generatePredDiffCommand(v1, v2, scope);			
+		} else {
+			diffCommand = ModuleMerger.generatePlainDiffCommand(v1, v2, scope);
+		}
 
 		A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, sigs, diffCommand, options);
 

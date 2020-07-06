@@ -64,7 +64,7 @@ public class ModuleComparisonTest {
 				A4Options options = new A4Options();
 				options.solver = A4Options.SatSolver.SAT4J;
 
-				A4Solution sol = ModuleDiff.diff(previous.toString(), f.toString());
+				A4Solution sol = ModuleDiff.diff(previous.toString(), f.toString(), true);
 				
 				List<A4Solution> sols = new ArrayList<>();
 

@@ -137,12 +137,12 @@ public class SolvingStatsComputer {
 				v2time = System.currentTimeMillis() - v2time;
 				if (v2TotalVars + v1TotalVars != 0) {
 					long v12time = System.currentTimeMillis();
-					A4Solution ans12 = ModuleDiff.diff(previous.toString(), f.toString(), scope);
+					A4Solution ans12 = ModuleDiff.diff(previous.toString(), f.toString(), scope, false);
 					int v12TotalVars = ModuleDiff.totalVarsSAT;
 					v12time = System.currentTimeMillis() - v12time;
 					
 					long v21time = System.currentTimeMillis();
-					A4Solution ans21 = ModuleDiff.diff(f.toString(), previous.toString(), scope);
+					A4Solution ans21 = ModuleDiff.diff(f.toString(), previous.toString(), scope, false);
 					int v21TotalVars = ModuleDiff.totalVarsSAT;
 					v21time = System.currentTimeMillis() - v21time;
 					

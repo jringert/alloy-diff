@@ -999,7 +999,7 @@ public class ModuleMerger {
 		c1 = c1.and(replaceSigRefs(v1.getAllReachableFacts(), true));
 		c2 = c2.and(replaceSigRefs(v2.getAllReachableFacts(), false));
 		
-		c1 = removeC1conjunctsFromC2(c2, c1);
+		// c1 = removeC1conjunctsFromC2(c2, c1);
 		
 		if (scope == -1) {
 			scope = 3;
@@ -1044,6 +1044,7 @@ public class ModuleMerger {
 		
 		Command cmd = new Command(false, scope, 7, -1, c2.and(c1.not()));
 
+		// this looks wrong in case only one module introduces an exact scope
 		for (Sig s : sigs.values()) {
 			if (cmd1.additionalExactScopes.contains(v1Sigs.get(s.label))
 					|| cmd2.additionalExactScopes.contains(v2Sigs.get(s.label))) {

@@ -1,0 +1,1 @@
+timeout -k 0s 10m /usr/bin/time -f "%M kB; %C" java -jar diff.jar ../models-master/algorithms/distributed-hashtable/chord.als ../models-master/algorithms/distributed-hashtable/chord2.als 5 noPred 2>> memory.log
