@@ -11,8 +11,6 @@ import java.util.Stack;
 
 import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.ast.Attr;
-import edu.mit.csail.sdg.ast.Command;
-import edu.mit.csail.sdg.ast.CommandScope;
 import edu.mit.csail.sdg.ast.Decl;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.ExprBinary;
@@ -22,7 +20,6 @@ import edu.mit.csail.sdg.ast.ExprHasName;
 import edu.mit.csail.sdg.ast.ExprITE;
 import edu.mit.csail.sdg.ast.ExprLet;
 import edu.mit.csail.sdg.ast.ExprList;
-import edu.mit.csail.sdg.ast.ExprList.Op;
 import edu.mit.csail.sdg.ast.ExprQt;
 import edu.mit.csail.sdg.ast.ExprUnary;
 import edu.mit.csail.sdg.ast.ExprVar;
@@ -40,57 +37,57 @@ public class ModuleMerger {
 	/**
 	 * merged signatures
 	 */
-	protected static Map<String, Sig> sigs;
+	protected Map<String, Sig> sigs;
 	/**
 	 * optional, merged signature expressions for signatures from v1 (to simulate
 	 * inheritance)
 	 */
-	protected static Map<String, Expr> v1SigExpr;
+	protected Map<String, Expr> v1SigExpr;
 	/**
 	 * optional, merged field expressions for signatures from v1 (to simulate
 	 * inheritance)
 	 */
-	protected static Map<String, Expr> v1FieldExpr;
+	protected Map<String, Expr> v1FieldExpr;
 	/**
 	 * inheritance information of v1 (not merged; on original signatures)
 	 */
-	protected static InheritanceUtil v1iu;
+	protected InheritanceUtil v1iu;
 	/**
 	 * optional, merged signature expressions for signatures from v2 (to simulate
 	 * inheritance)
 	 */
-	protected static Map<String, Expr> v2SigExpr;
+	protected Map<String, Expr> v2SigExpr;
 	/**
 	 * optional, merged field expressions for signatures from v2 (to simulate
 	 * inheritance)
 	 */
-	protected static Map<String, Expr> v2FieldExpr;
+	protected Map<String, Expr> v2FieldExpr;
 	/**
 	 * inheritance information of v2 (not merged; on original signatures)
 	 */
-	protected static InheritanceUtil v2iu;
+	protected InheritanceUtil v2iu;
 	/**
 	 * constraints to ensure instances of v1 on merged signatures
 	 */
-	protected static Expr c1;
+	protected Expr c1;
 	/**
 	 * constraints to ensure instances of v2 on merged signatures
 	 */
-	protected static Expr c2;
+	protected Expr c2;
 
-	protected static Map<String, Sig> v1Sigs;
-	protected static Map<String, Sig> v2Sigs;
+	protected Map<String, Sig> v1Sigs;
+	protected Map<String, Sig> v2Sigs;
 
 	/**
 	 * workaround for Alloy bug on parsing and predicate pred/totalOrder
 	 */
-	private static boolean inSigFactOfOrd = false;
+	private boolean inSigFactOfOrd = false;
 
 	/**
 	 * special flag for overriding signature references in fields when adding them
 	 * to subsignatures
 	 */
-	private static String sigOverrideForField;
+	private String sigOverrideForField;
 
 	/**
 	 * Merges signatures from v1 and v2 by creating combined Sigs for common
@@ -100,7 +97,7 @@ public class ModuleMerger {
 	 * @param v2
 	 * @return
 	 */
-	public static Collection<Sig> mergeSigs(Module v1, Module v2) {
+	public Collection<Sig> mergeSigs(Module v1, Module v2) {
 		/**
 		 * merged signatures
 		 */
@@ -235,7 +232,7 @@ public class ModuleMerger {
 	 * @param iu
 	 * @return
 	 */
-	private static Collection<Sig> getParentSigs(SubsetSig s, InheritanceUtil iu) {
+	private Collection<Sig> getParentSigs(SubsetSig s, InheritanceUtil iu) {
 		Set<Sig> parents = new LinkedHashSet<>();
 		if (sigs.containsKey(s.label)) {
 			parents.add(sigs.get(s.label));
@@ -252,7 +249,7 @@ public class ModuleMerger {
 		return parents;
 	}
 
-	private static Map<String, Field> mapOf(Set<Field> allFields) {
+	private Map<String, Field> mapOf(Set<Field> allFields) {
 		Map<String, Field> m = new LinkedHashMap<>();
 		if (allFields != null) {
 			for (Field f : allFields) {
@@ -262,7 +259,7 @@ public class ModuleMerger {
 		return m;
 	}
 
-	private static void addSignatureFacts(Module orig, boolean inV1) {
+	private void addSignatureFacts(Module orig, boolean inV1) {
 		for (Sig os : orig.getAllReachableUserDefinedSigs()) {
 			for (Expr of : os.getFacts()) {
 				Expr mergedSig = replaceSigRefs(os, inV1);
@@ -294,7 +291,7 @@ public class ModuleMerger {
 	 * @param m
 	 * @param fieldExpr
 	 */
-	private static void buildInheritanceFieldExpr(Module m, InheritanceUtil iu, Map<String, Expr> fieldExpr) {
+	private void buildInheritanceFieldExpr(Module m, InheritanceUtil iu, Map<String, Expr> fieldExpr) {
 		for (Sig owner : iu.getParentSigs()) {
 			for (Field f : owner.getFields()) {
 				String id = owner.label + "." + f.label;
@@ -315,7 +312,7 @@ public class ModuleMerger {
 		}
 	}
 
-	private static void buildInheritanceSigExpr(Module m, InheritanceUtil iu, Map<String, Expr> sigExpr) {
+	private void buildInheritanceSigExpr(Module m, InheritanceUtil iu, Map<String, Expr> sigExpr) {
 		for (Sig parent : m.getAllReachableUserDefinedSigs()) {
 			Set<Sig> mSubSigs = iu.getSubSigs(parent);
 			if (mSubSigs != null) {
@@ -342,7 +339,7 @@ public class ModuleMerger {
 	 * @param s2
 	 * @return
 	 */
-	private static Sig mergeSig(Sig s1, Sig s2) {
+	private Sig mergeSig(Sig s1, Sig s2) {
 		Sig s = new PrimSig(s1.label, getCommonSigAttributes(s1, s2));
 		c1 = generateSigAttributeConstraints(s, s1, v1iu, c1);
 		c2 = generateSigAttributeConstraints(s, s2, v2iu, c2);
@@ -363,7 +360,7 @@ public class ModuleMerger {
 	 * @param fields1
 	 * @param fields2
 	 */
-	private static void mergeFields(Sig mergedSig, Map<String, Field> fields1, Map<String, Field> fields2) {
+	private void mergeFields(Sig mergedSig, Map<String, Field> fields1, Map<String, Field> fields2) {
 		Set<String> fNames = new LinkedHashSet<String>();
 
 		fNames.addAll(fields1.keySet());
@@ -396,7 +393,7 @@ public class ModuleMerger {
 
 	}
 
-	private static void mergeField(Sig mergedSig, Field f1, Field f2) {
+	private void mergeField(Sig mergedSig, Field f1, Field f2) {
 		List<Decl> names = new ArrayList<>();
 		names.add(mergedSig.decl);
 
@@ -455,7 +452,7 @@ public class ModuleMerger {
 	 * @param fields
 	 * @param inV1
 	 */
-	private static void addFieldsOfUniqueSig(Sig s, Map<String, Field> fields, boolean inV1) {
+	private void addFieldsOfUniqueSig(Sig s, Map<String, Field> fields, boolean inV1) {
 		for (String fName : fields.keySet()) {
 			Stack<String> fieldsToAdd = new Stack<>();
 			if (getField(s, fName) == null) {
@@ -493,7 +490,7 @@ public class ModuleMerger {
 	 * @param field
 	 * @param inC1
 	 */
-	private static void addUniqueField(Sig mergedSig, Field field, boolean inC1) {
+	private void addUniqueField(Sig mergedSig, Field field, boolean inC1) {
 		List<Decl> names = new ArrayList<>();
 		names.add(mergedSig.decl);
 
@@ -524,7 +521,7 @@ public class ModuleMerger {
 		}
 	}
 
-	private static List<ExprHasName> replaceSigRefs(ConstList<? extends ExprHasName> es, boolean inV1) {
+	private List<ExprHasName> replaceSigRefs(ConstList<? extends ExprHasName> es, boolean inV1) {
 		List<ExprHasName> l = new ArrayList<>();
 		for (Expr e : es) {
 			l.add((ExprHasName) replaceSigRefs(e, inV1));
@@ -539,7 +536,7 @@ public class ModuleMerger {
 	 * @param expr
 	 * @return
 	 */
-	private static Expr replaceSigRefs(Expr expr, boolean inV1) {
+	protected Expr replaceSigRefs(Expr expr, boolean inV1) {
 		return replaceSigRefs(expr, new ArrayList<>(), inV1);
 	}
 
@@ -551,7 +548,7 @@ public class ModuleMerger {
 	 * @param names list of local names to use for ExprVar
 	 * @return
 	 */
-	private static Expr replaceSigRefs(Expr expr, List<Decl> names, boolean inV1) {
+	private Expr replaceSigRefs(Expr expr, List<Decl> names, boolean inV1) {
 		switch (expr.getClass().getSimpleName()) {
 		case "ExprUnary":
 			ExprUnary ue = (ExprUnary) expr;
@@ -673,7 +670,7 @@ public class ModuleMerger {
 		}
 	}
 
-	private static Func replaceSigRefs(Func fun, boolean inV1) {
+	private Func replaceSigRefs(Func fun, boolean inV1) {
 		List<Decl> decls = new ArrayList<Decl>();
 		// FIXME some functions have a decl that refernces a signature as this
 		// ..\models-master\ietf-rfcs\rfc7617-BasicAuth\basic-auth.als
@@ -687,7 +684,7 @@ public class ModuleMerger {
 		return fun2;
 	}
 
-	private static ExprVar getExprVarToSig(ExprVar ev) {
+	private ExprVar getExprVarToSig(ExprVar ev) {
 		ProductType pt = ev.type().iterator().next();
 		if (pt.arity() > 1) {
 			throw new RuntimeException("Arity > 1 when resolving a \"this\" expression");
@@ -704,7 +701,7 @@ public class ModuleMerger {
 		return (ExprVar) s.decl.get();
 	}
 
-	private static Type replaceSigRefs(Type t, boolean inV1) {
+	private Type replaceSigRefs(Type t, boolean inV1) {
 		for (ProductType pt : t) {
 			Type product = null;
 			for (int i = 0; i < pt.arity(); i++) {
@@ -732,7 +729,7 @@ public class ModuleMerger {
 		throw new RuntimeException("Unhandled case at end of replaceSigRefs(Type t)");
 	}
 
-	private static Sig getInternalSig(String label) {
+	private Sig getInternalSig(String label) {
 		switch (label) {
 		case "univ":
 			return Sig.UNIV;
@@ -750,7 +747,7 @@ public class ModuleMerger {
 
 	}
 
-	private static Expr getField(Sig sig, String label) {
+	private Expr getField(Sig sig, String label) {
 		if (sig != null) {
 			for (Field f : sig.getFields()) {
 				if (f.label.equals(label)) {
@@ -771,7 +768,7 @@ public class ModuleMerger {
 	 * @param expr
 	 * @return
 	 */
-	private static Expr replaceArrows(Expr expr) {
+	private Expr replaceArrows(Expr expr) {
 		switch (expr.getClass().getSimpleName()) {
 		case "ExprUnary":
 			ExprUnary ue = (ExprUnary) expr;
@@ -813,7 +810,7 @@ public class ModuleMerger {
 	 * @param op2
 	 * @return
 	 */
-	private static ExprUnary.Op getMergeOp(ExprUnary.Op op, ExprUnary.Op op2) {
+	private ExprUnary.Op getMergeOp(ExprUnary.Op op, ExprUnary.Op op2) {
 		switch (op) {
 		case SETOF:
 			return ExprUnary.Op.SETOF;
@@ -882,7 +879,7 @@ public class ModuleMerger {
 	 * @param c
 	 * @return
 	 */
-	private static Expr generateSigAttributeConstraints(Sig s, Sig old, InheritanceUtil iu, Expr c) {
+	private Expr generateSigAttributeConstraints(Sig s, Sig old, InheritanceUtil iu, Expr c) {
 
 		if (old.isAbstract != null && s.isAbstract == null) {
 			// without inheritance, abstract has no impact
@@ -914,7 +911,7 @@ public class ModuleMerger {
 	 * @param s2
 	 * @return
 	 */
-	private static Attr[] getCommonSigAttributes(Sig s1, Sig s2) {
+	private Attr[] getCommonSigAttributes(Sig s1, Sig s2) {
 		List<Attr> attrs = new ArrayList<>();
 		for (Attr a1 : s1.attributes) {
 			for (Attr a2 : s2.attributes) {
@@ -926,285 +923,4 @@ public class ModuleMerger {
 		return attrs.toArray(new Attr[] {});
 	}
 
-	/**
-	 * a run command diffing the two original commands
-	 * 
-	 * @param v1
-	 * @param v2
-	 * @return
-	 */
-	public static Command generateDiffCommand(Module v1, Module v2) {
-
-		Command cmd1 = v1.getAllCommands().get(0);
-		Command cmd2 = v2.getAllCommands().get(0);
-
-		int overall = Math.max(cmd1.overall, cmd2.overall);
-		overall = Math.max(overall, 4); // FIXME not needed if inheritance scope is taken into account
-		int bitwidth = Math.max(cmd1.bitwidth, cmd2.bitwidth);
-		int maxseq = Math.max(cmd1.maxseq, cmd2.maxseq);
-
-		c1 = c1.and(replaceSigRefs(cmd1.formula, true));
-		c2 = c2.and(replaceSigRefs(cmd2.formula, false));
-
-		Command cmd = new Command(false, overall, bitwidth, maxseq, c2.and(c1.not()));
-
-		for (Sig s : sigs.values()) {
-			CommandScope s1 = cmd1.getScope(v1Sigs.get(s.label));
-			CommandScope s2 = cmd2.getScope(v2Sigs.get(s.label));
-
-			int scope = -1;
-			boolean exact = false;
-
-			// take scope from v1
-			if (s1 != null) {
-				scope = Math.max(scope, s1.endingScope);
-				exact |= s1.isExact;
-			}
-			// or take scope from v1
-			if (s2 != null) {
-				scope = Math.max(scope, s2.endingScope);
-				exact |= s2.isExact;
-			}
-
-			// FIXME take inheritance scopes into account
-
-			if (scope != -1) {
-				cmd = cmd.change(s, exact, scope);
-			}
-
-			if (cmd1.additionalExactScopes.contains(v1Sigs.get(s.label))
-					|| cmd2.additionalExactScopes.contains(v2Sigs.get(s.label))) {
-				List<Sig> exactScopes = new ArrayList<>(cmd.additionalExactScopes);
-				exactScopes.add(s);
-				cmd = cmd.change(exactScopes.toArray(new Sig[] {}));
-			}
-		}
-
-//		return new Command(false, -1, -1, -1, c2.and(c1.not()));
-		return cmd;
-	}
-
-	/**
-	 * a run command diffing the two original commands
-	 * 
-	 * @param v1
-	 * @param v2
-	 * @return
-	 */
-	public static Command generatePlainDiffCommand(Module v1, Module v2, int scope) {
-
-		Command cmd1 = v1.getAllCommands().get(0);
-		Command cmd2 = v2.getAllCommands().get(0);
-
-		c1 = c1.and(replaceSigRefs(v1.getAllReachableFacts(), true));
-		c2 = c2.and(replaceSigRefs(v2.getAllReachableFacts(), false));
-		
-		// c1 = removeC1conjunctsFromC2(c2, c1);
-		
-		if (scope == -1) {
-			scope = 3;
-		}
-		for (Sig parent : v1iu.getParentSigs()) {			
-			Expr union = null;
-			int ones = 0;
-			for (Sig child : v1iu.getSubSigs(parent)) {
-				Sig s = sigs.get(child.label);
-				if (s != null) {
-					if (s.isOne != null) {
-						ones++;
-					}
-					if (union == null) {
-						union = s;
-					} else {
-						union = union.plus(s);
-					}					
-				}
-			}
-			if (union != null) {
-				c1 = c1.and(union.cardinality().lte(ExprConstant.makeNUMBER(Math.max(ones, scope))));
-			}
-		}		
-		for (Sig parent : v2iu.getParentSigs()) {
-			Expr union = null;
-			for (Sig child : v2iu.getSubSigs(parent)) {
-				Sig s = sigs.get(child.label);
-				if (s != null) {
-					if (union == null) {
-						union = s;
-					} else {
-						union = union.plus(s);
-					}					
-				}
-			}
-			if (union != null) {
-				c2 = c2.and(union.cardinality().lte(ExprConstant.makeNUMBER(scope)));
-			}
-		}
-		
-		
-		Command cmd = new Command(false, scope, 7, -1, c2.and(c1.not()));
-
-		// this looks wrong in case only one module introduces an exact scope
-		for (Sig s : sigs.values()) {
-			if (cmd1.additionalExactScopes.contains(v1Sigs.get(s.label))
-					|| cmd2.additionalExactScopes.contains(v2Sigs.get(s.label))) {
-				List<Sig> exactScopes = new ArrayList<>(cmd.additionalExactScopes);
-				exactScopes.add(s);
-				cmd = cmd.change(exactScopes.toArray(new Sig[] {}));
-			}
-		}
-
-		return cmd;
-	}
-	
-
-	private static Expr removeC1conjunctsFromC2(Expr c12, Expr c22) {		
-		Set<Expr> conjunctsC1 = conjuncts(c12);
-		Set<Expr> conjunctsC2 = conjuncts(c22);
-		
-		int size = conjunctsC2.size();
-		
-		conjunctsC2.removeAll(conjunctsC1);
-		
-		Map<String, Set<Expr>> str2ex = new LinkedHashMap<>();
-		for (Expr c : conjunctsC1) {
-			String str = c.toString();
-			Set<Expr> es = str2ex.get(str);
-			if (es == null) {
-				es = new LinkedHashSet<>();
-				str2ex.put(str, es);
-			}
-			es.add(c);
-		}
-		Set<Expr> found = new LinkedHashSet<>();
-		for (Expr e : conjunctsC2) {
-			if (str2ex.get(e.toString()) != null) {
-				for (Expr c : str2ex.get(e.toString())) {
-//					if (e.isSame(c)) {
-						found.add(e);
-//					}
-				}
-			}
-		}
-
-		conjunctsC2.removeAll(found);
-		
-		System.err.println("remove conjuncts from C2 (BASED ON STR EQ): " + (size - conjunctsC2.size()));
-		
-		if (conjunctsC2.isEmpty()) {
-			return ExprConstant.TRUE;
-		}
-		
-		return ExprList.make(null, null, Op.AND, new ArrayList<>(conjunctsC2));
-	}
-
-	private static Set<Expr> conjuncts(Expr e) {
-		Set<Expr> cons = new LinkedHashSet<Expr>(); 
-		if (e instanceof ExprList && ((ExprList) e).op.equals(ExprList.Op.AND)) {
-			ExprList l = (ExprList)e;
-			cons.addAll(l.args);
-		} else if (e instanceof ExprBinary && ((ExprBinary) e).op.equals(ExprBinary.Op.AND)) {
-			ExprBinary b = (ExprBinary)e;
-			cons.add(b.left);
-			cons.add(b.right);
-		} else {
-				return Set.of(e);
-		}
-		Set<Expr> moreCons = new LinkedHashSet<Expr>();
-		for (Expr c : cons) {
-			moreCons.addAll(conjuncts(c));
-		}
-		return moreCons;
-	}
-
-	/**
-	 * a run command diffing the two original commands
-	 * 
-	 * @param v1
-	 * @param v2
-	 * @return
-	 */
-	public static Command generatePlainConjunctionCommand(Module v1, Module v2, int scope) {
-
-		Command cmd1 = v1.getAllCommands().get(0);
-		Command cmd2 = v2.getAllCommands().get(0);
-
-		c1 = c1.and(replaceSigRefs(v1.getAllReachableFacts(), true));
-		c2 = c2.and(replaceSigRefs(v2.getAllReachableFacts(), false));
-
-		Command cmd = new Command(false, scope, -1, -1, c1.and(c2));
-
-		for (Sig s : sigs.values()) {
-			if (cmd1.additionalExactScopes.contains(v1Sigs.get(s.label))
-					|| cmd2.additionalExactScopes.contains(v2Sigs.get(s.label))) {
-				List<Sig> exactScopes = new ArrayList<>(cmd.additionalExactScopes);
-				exactScopes.add(s);
-				cmd = cmd.change(exactScopes.toArray(new Sig[] {}));
-			}
-		}
-
-		return cmd;
-	}
-
-	public static Command generatePredDiffCommand(Module v1, Module v2, int scope) {
-		Command cmd1 = v1.getAllCommands().get(0);
-		Command cmd2 = v2.getAllCommands().get(0);
-
-		c1 = c1.and(replaceSigRefs(cmd1.formula, true));
-		c2 = c2.and(replaceSigRefs(cmd2.formula, false));
-		
-		if (scope == -1) {
-			scope = 3;
-		}
-		for (Sig parent : v1iu.getParentSigs()) {			
-			Expr union = null;
-			int ones = 0;
-			for (Sig child : v1iu.getSubSigs(parent)) {
-				Sig s = sigs.get(child.label);
-				if (s != null) {
-					if (s.isOne != null) {
-						ones++;
-					}
-					if (union == null) {
-						union = s;
-					} else {
-						union = union.plus(s);
-					}					
-				}
-			}
-			if (union != null) {
-				c1 = c1.and(union.cardinality().lte(ExprConstant.makeNUMBER(Math.max(ones, scope))));
-			}
-		}		
-		for (Sig parent : v2iu.getParentSigs()) {
-			Expr union = null;
-			for (Sig child : v2iu.getSubSigs(parent)) {
-				Sig s = sigs.get(child.label);
-				if (s != null) {
-					if (union == null) {
-						union = s;
-					} else {
-						union = union.plus(s);
-					}					
-				}
-			}
-			if (union != null) {
-				c2 = c2.and(union.cardinality().lte(ExprConstant.makeNUMBER(scope)));
-			}
-		}
-		
-		
-		Command cmd = new Command(false, scope, 7, -1, c2.and(c1.not()));
-
-		for (Sig s : sigs.values()) {
-			if (cmd1.additionalExactScopes.contains(v1Sigs.get(s.label))
-					|| cmd2.additionalExactScopes.contains(v2Sigs.get(s.label))) {
-				List<Sig> exactScopes = new ArrayList<>(cmd.additionalExactScopes);
-				exactScopes.add(s);
-				cmd = cmd.change(exactScopes.toArray(new Sig[] {}));
-			}
-		}
-
-		return cmd;
-	}
 }

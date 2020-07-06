@@ -114,13 +114,15 @@ public class ModuleDiff {
 			options.solver = A4Options.SatSolver.CryptoMiniSatJNI;
 		}
 
-		Collection<Sig> sigs = ModuleMerger.mergeSigs(v1, v2);
+		ModuleMerger m = new ModuleMerger();
+		Collection<Sig> sigs = m.mergeSigs(v1, v2);
 
+		CommandGenerator cg = new CommandGenerator(m);
 		Command diffCommand;
 		if (withPred) {
-			diffCommand = ModuleMerger.generatePredDiffCommand(v1, v2, scope);			
+			diffCommand = cg.generatePredDiffCommand(v1, v2, scope);			
 		} else {
-			diffCommand = ModuleMerger.generatePlainDiffCommand(v1, v2, scope);
+			diffCommand = cg.generatePlainDiffCommand(v1, v2, scope);
 		}
 
 		A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, sigs, diffCommand, options);

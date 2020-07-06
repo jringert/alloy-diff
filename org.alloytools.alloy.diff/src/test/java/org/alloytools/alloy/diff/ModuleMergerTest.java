@@ -51,7 +51,8 @@ public class ModuleMergerTest {
 		int v1SigsCount = v1.getAllReachableUserDefinedSigs().size();
 		int v2SigsCount = v1.getAllReachableUserDefinedSigs().size();
 
-		Collection<Sig> sigs = ModuleMerger.mergeSigs(v1, v2);
+		ModuleMerger m = new ModuleMerger();
+		Collection<Sig> sigs = m.mergeSigs(v1, v2);
 
 		assertEquals(v1SigsCount + v2SigsCount, sigs.size());
 	}
@@ -67,7 +68,8 @@ public class ModuleMergerTest {
 		Module v1 = CompUtil.parseEverything_fromFile(rep, null, "misc/multiplicities/tests/v2testSignatureCountv1.als");
 		Module v2 = CompUtil.parseEverything_fromFile(rep, null, "misc/multiplicities/tests/v2testSignatureCountv2.als");
 
-		Collection<Sig> sigs = ModuleMerger.mergeSigs(v1, v2);
+		ModuleMerger m = new ModuleMerger();
+		Collection<Sig> sigs = m.mergeSigs(v1, v2);
 
 		assertEquals(3, sigs.size());
 	}
@@ -81,7 +83,8 @@ public class ModuleMergerTest {
 		Module v1 = CompUtil.parseEverything_fromFile(rep, null, "misc/multiplicities/tests/fieldTest1v1.als");
 		Module v2 = CompUtil.parseEverything_fromFile(rep, null, "misc/multiplicities/tests/fieldTest1v2.als");
 
-		Collection<Sig> sigs = ModuleMerger.mergeSigs(v1, v2);
+		ModuleMerger m = new ModuleMerger();
+		Collection<Sig> sigs = m.mergeSigs(v1, v2);
 
 		assertEquals(1, getFieldCount(sigs));
 	}
@@ -95,7 +98,8 @@ public class ModuleMergerTest {
 		Module v1 = CompUtil.parseEverything_fromFile(rep, null, "misc/multiplicities/tests/fieldTest2v1.als");
 		Module v2 = CompUtil.parseEverything_fromFile(rep, null, "misc/multiplicities/tests/fieldTest2v2.als");
 
-		Collection<Sig> sigs = ModuleMerger.mergeSigs(v1, v2);
+		ModuleMerger m = new ModuleMerger();
+		Collection<Sig> sigs = m.mergeSigs(v1, v2);
 
 		assertEquals(3, getFieldCount(sigs));
 	}
@@ -122,7 +126,8 @@ public class ModuleMergerTest {
 
 		int sigNum = v1.getAllReachableUserDefinedSigs().size();
 
-		Collection<Sig> sigs = ModuleMerger.mergeSigs(v1, v1);
+		ModuleMerger m = new ModuleMerger();
+		Collection<Sig> sigs = m.mergeSigs(v1, v1);
 
 		assertEquals(sigNum, sigs.size());
 	}
@@ -142,11 +147,12 @@ public class ModuleMergerTest {
 
 		int sigNum = v1.getAllReachableUserDefinedSigs().size();
 
-		Collection<Sig> sigs = ModuleMerger.mergeSigs(v1, empty);
+		ModuleMerger m = new ModuleMerger();
+		Collection<Sig> sigs = m.mergeSigs(v1, empty);
 
 		assertEquals(sigNum, sigs.size());
 
-		sigs = ModuleMerger.mergeSigs(empty, v1);
+		sigs = m.mergeSigs(empty, v1);
 
 		assertEquals(sigNum, sigs.size());
 
@@ -172,11 +178,12 @@ public class ModuleMergerTest {
 
 		int sigNum = v1.getAllReachableUserDefinedSigs().size();
 
-		Collection<Sig> sigs = ModuleMerger.mergeSigs(v1, one);
+		ModuleMerger m = new ModuleMerger();
+		Collection<Sig> sigs = m.mergeSigs(v1, one);
 
 		assertEquals(sigNum + 1, sigs.size());
 
-		sigs = ModuleMerger.mergeSigs(one, v1);
+		sigs = m.mergeSigs(one, v1);
 
 		assertEquals(sigNum + 1, sigs.size());
 	}
@@ -204,7 +211,8 @@ public class ModuleMergerTest {
 		Set<String> allNames = getSigNames(v1.getAllReachableUserDefinedSigs());
 		allNames.addAll(getSigNames(v2.getAllReachableUserDefinedSigs()));
 
-		Set<String> mergedNames = getSigNames(ModuleMerger.mergeSigs(v1, v2));
+		ModuleMerger m = new ModuleMerger();
+		Set<String> mergedNames = getSigNames(m.mergeSigs(v1, v2));
 		assertEquals(allNames, mergedNames);
 	}
 
@@ -244,7 +252,8 @@ public class ModuleMergerTest {
 		Set<Sig> unique2 = new HashSet<Sig>();
 		unique2.addAll(allSigsv2);
 
-		Iterable<Sig> mergedSigs = ModuleMerger.mergeSigs(v1, v2);
+		ModuleMerger m = new ModuleMerger();
+		Iterable<Sig> mergedSigs = m.mergeSigs(v1, v2);
 
 		// not unique
 		for (Sig s : allSigsv1) {
