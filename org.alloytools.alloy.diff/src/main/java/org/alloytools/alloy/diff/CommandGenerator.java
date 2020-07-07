@@ -50,8 +50,9 @@ public class CommandGenerator {
 
 		Command cmd4scope = new Command(false, scope, -1, -1, ExprConstant.TRUE);
 		ScopeComputer sc1 = ScopeComputer.compute(new A4Reporter(), new A4Options(), m.v1Sigs.values(), cmd4scope).b;
-		
+		ScopeComputer sc1orig = ScopeComputer.compute(new A4Reporter(), new A4Options(), m.v1Sigs.values(), cmd1).b;
 		ScopeComputer sc2 = ScopeComputer.compute(new A4Reporter(), new A4Options(), m.v2Sigs.values(), cmd4scope).b;
+		ScopeComputer sc2orig = ScopeComputer.compute(new A4Reporter(), new A4Options(), m.v2Sigs.values(), cmd2).b;
 		
 		// restrict union of children to scope of parent in v1
 		for (Sig parent : m.v1iu.getParentSigs()) {			
@@ -77,7 +78,7 @@ public class CommandGenerator {
 					union = union.plus(p);
 				}
 				
-				int scopeInOrig = sc1.sig2scope(parent);
+				int scopeInOrig = Math.min(sc1.sig2scope(parent), sc1orig.sig2scope(parent));
 				if (sc1.isExact(parent) || cmd1.additionalExactScopes.contains(parent)) {
 					c1 = c1.and(union.cardinality().equal(ExprConstant.makeNUMBER(Math.max(ones, scopeInOrig))));
 				} else {
@@ -110,7 +111,7 @@ public class CommandGenerator {
 					union = union.plus(p);
 				}
 
-				int scopeInOrig = sc2.sig2scope(parent);
+				int scopeInOrig = Math.min(sc2.sig2scope(parent), sc2orig.sig2scope(parent));
 				if (sc2.isExact(parent) || cmd2.additionalExactScopes.contains(parent)) {
 					c2 = c2.and(union.cardinality().equal(ExprConstant.makeNUMBER(Math.max(ones, scopeInOrig))));
 				} else {
@@ -141,7 +142,7 @@ public class CommandGenerator {
 			int scope1 = -1;
 			boolean exact1 = cmd1.additionalExactScopes.contains(s1);
 			if (s1 != null) {
-				scope1 = sc1.sig2scope(s1);
+				scope1 = Math.min(sc1.sig2scope(s1), sc1orig.sig2scope(s1));
 				exact1 |= sc1.isExact(s1); 
 			}
 			
@@ -149,7 +150,7 @@ public class CommandGenerator {
 			int scope2 = -1;
 			boolean exact2 = cmd2.additionalExactScopes.contains(s2);
 			if (s2 != null) {
-				scope2 = sc2.sig2scope(s2);
+				scope2 = Math.min(sc2.sig2scope(s2), sc2orig.sig2scope(s2));
 				exact2 |= sc2.isExact(s2); 
 			}
 

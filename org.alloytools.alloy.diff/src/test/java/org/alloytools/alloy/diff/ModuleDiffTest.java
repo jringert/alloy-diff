@@ -111,7 +111,7 @@ public class ModuleDiffTest {
 	@MethodSource("allAlloyFiles")
 	public void diffSelfSelf(Path f) {
 		System.out.println("diff " + f.toString() + " and itself");
-		A4Solution ans = ModuleDiff.diff(f.toString(), f.toString());
+		A4Solution ans = ModuleDiff.diff(f.toString(), f.toString(), 3, true);
 		assertFalse(f.toString() + " had a satisfiable diff with itself", ans.satisfiable());
 	}
 
@@ -123,7 +123,7 @@ public class ModuleDiffTest {
 		if (previous != null) {
 			System.out.println("diff " + previous.toString() + " and " + f.toString());
 			try {
-				ModuleDiff.diff(previous.toString(), f.toString(),5, true);
+				ModuleDiff.diff(previous.toString(), f.toString(),3, true);
 			} catch (Exception e) {
 				previous = f;
 				throw e;
