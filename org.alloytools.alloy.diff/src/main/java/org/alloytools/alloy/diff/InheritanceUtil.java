@@ -24,13 +24,13 @@ public class InheritanceUtil {
 
 	public InheritanceUtil(Module m) {
 		for (Sig s : m.getAllReachableSigs()) {
-			if (s instanceof PrimSig) {
+			if (s instanceof PrimSig && !s.builtin) {
 				// add fields
 				allFields.put(s, computeTransitiveExtendsFields(s));
 
 				// add direct parents
 				Sig parent = ((PrimSig) s).parent;
-				if (parent != null) {
+				if (parent != null && !parent.builtin) {
 					Set<Sig> subs = subSigs.get(parent);
 					if (subs == null) {
 						subs = new LinkedHashSet<>();
