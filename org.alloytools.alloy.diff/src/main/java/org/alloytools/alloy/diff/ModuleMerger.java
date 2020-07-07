@@ -88,6 +88,8 @@ public class ModuleMerger {
 	 * to subsignatures
 	 */
 	private String sigOverrideForField;
+	
+	protected int maxInt;
 
 	/**
 	 * Merges signatures from v1 and v2 by creating combined Sigs for common
@@ -112,6 +114,7 @@ public class ModuleMerger {
 		v2Sigs = new LinkedHashMap<>();
 		c1 = ExprConstant.TRUE;
 		c2 = ExprConstant.TRUE;
+		maxInt = 0;
 		
 		// fill look-up tables
 		for (Sig s : v1.getAllReachableUserDefinedSigs()) {
@@ -638,6 +641,7 @@ public class ModuleMerger {
 			}
 			return res;
 		case "ExprConstant":
+			maxInt = Math.max(maxInt,((ExprConstant)expr).num());
 			return expr;
 		case "ExprCall":
 			//

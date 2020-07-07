@@ -1,6 +1,7 @@
 package org.alloytools.alloy.diff;
 
 import edu.mit.csail.sdg.alloy4.A4Reporter;
+import edu.mit.csail.sdg.alloy4.Util;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.ExprConstant;
@@ -29,6 +30,9 @@ public class CommandGenerator {
 		Command cmd1 = v1.getAllCommands().get(0);
 		Command cmd2 = v2.getAllCommands().get(0);
 		
+		int bitwidth = 0;
+		int maxInt = m.maxInt;
+		
 		Expr c1 = null;
 		Expr c2 = null;
 		
@@ -44,7 +48,7 @@ public class CommandGenerator {
 			scope = 3;
 		}
 
-		Command cmd4scope = new Command(false, scope, 7, -1, ExprConstant.TRUE);
+		Command cmd4scope = new Command(false, scope, -1, -1, ExprConstant.TRUE);
 		ScopeComputer sc1 = ScopeComputer.compute(new A4Reporter(), new A4Options(), m.v1Sigs.values(), cmd4scope).b;
 		
 		ScopeComputer sc2 = ScopeComputer.compute(new A4Reporter(), new A4Options(), m.v2Sigs.values(), cmd4scope).b;
@@ -79,6 +83,7 @@ public class CommandGenerator {
 				} else {
 					c1 = c1.and(union.cardinality().lte(ExprConstant.makeNUMBER(Math.max(ones, scopeInOrig))));
 				}
+				maxInt = Math.max(maxInt, Math.max(ones, scopeInOrig));
 			}
 		}		
 		// restrict union of children to scope of parent in v2
@@ -115,16 +120,25 @@ public class CommandGenerator {
 
 		}
 		
+		for (Sig s : m.v1Sigs.values()) {
+			maxInt = Math.max(maxInt, sc1.sig2scope(s));
+		}
+		for (Sig s : m.v2Sigs.values()) {
+			maxInt = Math.max(maxInt, sc2.sig2scope(s));
+		}
+		while (maxInt > Util.max(bitwidth)) {
+			bitwidth++;
+		}
 		
-		Command cmd = new Command(false, scope, 7, -1, c2.and(c1.not()));
+		Command cmd = new Command(false, scope, bitwidth, -1, c2.and(c1.not()));
 		
 		boolean changed = false;
-		// this looks wrong in case only one module introduces an exact scope
+		// update scope based on both modules
 		for (String sName : m.sigs.keySet()) {
 			Sig s = m.sigs.get(sName);
 			
 			Sig s1 = m.v1Sigs.get(sName);
-			int scope1 = 0;
+			int scope1 = -1;
 			boolean exact1 = cmd1.additionalExactScopes.contains(s1);
 			if (s1 != null) {
 				scope1 = sc1.sig2scope(s1);
@@ -132,20 +146,24 @@ public class CommandGenerator {
 			}
 			
 			Sig s2 = m.v2Sigs.get(sName);
-			int scope2 = 0;
+			int scope2 = -1;
 			boolean exact2 = cmd2.additionalExactScopes.contains(s2);
 			if (s2 != null) {
 				scope2 = sc2.sig2scope(s2);
 				exact2 |= sc2.isExact(s2); 
 			}
 
-			cmd = cmd.change(s, exact1 && exact2, Math.max(scope1, scope2));
+			if (Math.max(scope1, scope2) >= 1) { 
+				// note that 0 can be computed if scope is too small for all subsignatures
+				// however, if we restrict it, Alloy complains with an error
+				cmd = cmd.change(s, exact1 && exact2, Math.max(scope1, scope2));
+			}
 			// take care of one side exact
-			if (s1 != null && exact1 && !exact2) {
+			if (s1 != null && exact1 && !exact2 && scope1 != -1) {
 				c1 = c1.and(s.cardinality().equal(ExprConstant.makeNUMBER(scope1)));
 				changed = true;
 			}
-			if (s2 != null && !exact1 && exact2) {
+			if (s2 != null && !exact1 && exact2 && scope2 != -1) {
 				c2 = c2.and(s.cardinality().equal(ExprConstant.makeNUMBER(scope2)));
 				changed = true;
 			}			
@@ -154,7 +172,7 @@ public class CommandGenerator {
 		if (changed) {
 			cmd = cmd.change(c2.and(c1.not()));
 		}
-
+		
 		return cmd;
 	}
 	

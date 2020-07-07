@@ -123,7 +123,7 @@ public class ModuleDiffTest {
 		if (previous != null) {
 			System.out.println("diff " + previous.toString() + " and " + f.toString());
 			try {
-				ModuleDiff.diff(previous.toString(), f.toString(),10, true);
+				ModuleDiff.diff(previous.toString(), f.toString(),5, true);
 			} catch (Exception e) {
 				previous = f;
 				throw e;
@@ -213,6 +213,13 @@ public class ModuleDiffTest {
 		A4Solution ans = ModuleDiff.diff("misc/empty.als", file, 10, false);
 //		ans = ModuleDiff.diff(file, "misc/empty.als");
 		assertTrue(ans.satisfiable());
+	}
+	
+	@Test
+	public void diffAppAClosure() {
+		String file = "../models-master/software-abstractions-book/appendixA/closure.als";
+		A4Solution ans = ModuleDiff.diff("misc/empty.als", file, 3, true);
+		assertFalse(ans.satisfiable());
 	}
 
 }
