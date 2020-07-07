@@ -67,7 +67,7 @@ import edu.mit.csail.sdg.ast.Sig.PrimSig;
  * Please see ScopeComputer.java for the exact rules for deriving the missing
  * scopes.
  */
-final class ScopeComputer {
+public final class ScopeComputer {
 
     // It calls A4Solution's constructor
 
@@ -394,17 +394,20 @@ final class ScopeComputer {
         // Derive the implicit scopes
         while (true) {
             if (derive_abstract_scope(sigs)) {
-                do {}
+                do {
+                }
                 while (derive_abstract_scope(sigs));
                 continue;
             }
             if (derive_overall_scope(sigs)) {
-                do {}
+                do {
+                }
                 while (derive_overall_scope(sigs));
                 continue;
             }
             if (derive_scope_from_parent(sigs)) {
-                do {}
+                do {
+                }
                 while (derive_scope_from_parent(sigs));
                 continue;
             }
@@ -465,7 +468,7 @@ final class ScopeComputer {
      * Please see ScopeComputer.java for the exact rules for deriving the missing
      * scopes.
      */
-    static Pair<A4Solution,ScopeComputer> compute(A4Reporter rep, A4Options opt, Iterable<Sig> sigs, Command cmd) throws Err {
+    public static Pair<A4Solution,ScopeComputer> compute(A4Reporter rep, A4Options opt, Iterable<Sig> sigs, Command cmd) throws Err {
         ScopeComputer sc = new ScopeComputer(rep, sigs, cmd);
         Set<String> set = cmd.getAllStringConstants(sigs);
         if (sc.maxstring >= 0 && set.size() > sc.maxstring)

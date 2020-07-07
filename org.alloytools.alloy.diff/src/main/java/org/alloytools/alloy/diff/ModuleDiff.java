@@ -16,13 +16,13 @@ public class ModuleDiff {
 	public static int totalVarsSAT = 0;
 
 	public static A4Reporter rep = new A4Reporter() {
-		private boolean quiet = false;
+		private boolean quiet = true;
 		
 
 		@Override
 		public void bound(String msg) {
 			if (!quiet) {
-				System.out.print(msg);
+				System.out.println(msg);
 				System.out.flush();
 			}
 			super.bound(msg);
@@ -31,7 +31,7 @@ public class ModuleDiff {
 		@Override
 		public void debug(String msg) {
 			if (!quiet) {
-				System.out.print(msg);
+				System.out.println(msg);
 				System.out.flush();
 			}
 			super.debug(msg);
@@ -40,7 +40,7 @@ public class ModuleDiff {
 		@Override
 		public void warning(ErrorWarning msg) {
 			if (!quiet) {
-				System.out.print("Relevance Warning:\n" + (msg.toString().trim()) + "\n\n");
+				System.out.println("Relevance Warning:\n" + (msg.toString().trim()) + "\n\n");
 				System.out.flush();
 			}
 		}
@@ -48,10 +48,10 @@ public class ModuleDiff {
 		@Override
 		public void solve(int primaryVars, int totalVars, int clauses) {
 			totalVarsSAT = totalVars;
-			if (!quiet) {
-				System.out.print(totalVars + " vars. " + primaryVars + " primary vars. " + clauses + " clauses.");
+//			if (!quiet) {
+				System.out.println(totalVars + " vars. " + primaryVars + " primary vars. " + clauses + " clauses.");
 				System.out.flush();
-			}
+//			}
 			super.solve(primaryVars, totalVars, clauses);
 		}
 
@@ -66,7 +66,7 @@ public class ModuleDiff {
 		@Override
 		public void translate(String solver, int bitwidth, int maxseq, int skolemDepth, int symmetry) {
 			if (!quiet) {
-				System.out.print("bitwidth " + bitwidth + " skolemDepth " + skolemDepth);
+				System.out.println("bitwidth " + bitwidth + " skolemDepth " + skolemDepth);
 				System.out.flush();
 			}
 		}
@@ -108,6 +108,7 @@ public class ModuleDiff {
 	 */
 	private static A4Solution diff(Module v1, Module v2, int scope, boolean withPred) {
 
+		options.skolemDepth = 1;
 		if (System.getProperty("os.name").contains("indows")) {
 			options.solver = A4Options.SatSolver.SAT4J;
 		} else {
@@ -118,12 +119,7 @@ public class ModuleDiff {
 		Collection<Sig> sigs = m.mergeSigs(v1, v2);
 
 		CommandGenerator cg = new CommandGenerator(m);
-		Command diffCommand;
-		if (withPred) {
-			diffCommand = cg.generatePredDiffCommand(v1, v2, scope);			
-		} else {
-			diffCommand = cg.generatePlainDiffCommand(v1, v2, scope);
-		}
+		Command diffCommand = cg.generateDiffCommand(v1, v2, scope, withPred);			
 
 		A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, sigs, diffCommand, options);
 

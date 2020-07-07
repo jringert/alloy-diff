@@ -176,6 +176,7 @@ public final class A4Options implements Serializable {
         /** Lingeling */
         public static final SatSolver LingelingJNI     = new SatSolver("lingeling(jni)", "Lingeling", null, null, true);
         public static final SatSolver PLingelingJNI    = new SatSolver("plingeling(jni)", "PLingeling", null, null, true);
+        public static final SatSolver PLingeling       = new SatSolver("plingeling(jni)", "PLingeling", "plingeling", null, true);
         /** Glucose */
         public static final SatSolver GlucoseJNI       = new SatSolver("glucose(jni)", "Glucose", null, null, true);
         public static final SatSolver Glucose41JNI     = new SatSolver("glucose 4.1(jni)", "Glucose41", null, null, true);
@@ -196,7 +197,8 @@ public final class A4Options implements Serializable {
     /**
      * Constructs an A4Options object with default values for everything.
      */
-    public A4Options() {}
+    public A4Options() {
+    }
 
     public boolean   inferPartialInstance = true;
 
