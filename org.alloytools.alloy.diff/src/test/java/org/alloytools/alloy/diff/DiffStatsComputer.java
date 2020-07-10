@@ -11,7 +11,11 @@ public class DiffStatsComputer {
 
 	public static void main(String[] args) throws IOException {
 		boolean withPred = args.length == 4;
-		writeStats(args[0], args[1], Integer.parseInt(args[2]), withPred);
+		try {
+			writeStats(args[0], args[1], Integer.parseInt(args[2]), withPred);
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
 	}
 
 	private static void writeStats(String f1, String f2, int scope, boolean withPred) throws IOException {		

@@ -15,7 +15,7 @@ import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 
 public class SolvingStatsComputer {
 	static String[] sigFolders = new String[] { 
-//			"../models-master/algorithms/distributed-hashtable",
+			"../models-master/algorithms/distributed-hashtable",
 			"../models-master/software-abstractions-book/appendixA",
 			"../models-master/software-abstractions-book/chapter2",
 			"../models-master/software-abstractions-book/chapter4",

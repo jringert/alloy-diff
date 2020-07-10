@@ -118,7 +118,7 @@ public class SolvingStatsComputerWithPred {
 	
 	private static Path previous = null;
 
-	private static void writeStats(Path f) throws IOException {		
+	public static void writeStats(Path f) throws IOException {		
 		if (previous != null) {
 			try {
 				
@@ -174,6 +174,14 @@ public class SolvingStatsComputerWithPred {
 		previous = f;
 	}
 
+	public static void writeStatsCommand(Path f) throws IOException {		
+		if (previous != null) {
+			System.out.println("diff.sh " + previous.toString() + " " + f.toString() + " " + scope);
+			System.out.println("diff.sh " + f.toString() + " " + previous.toString() + " " + scope);
+		}
+		previous = f;
+	}
+	
 	private static String classify(boolean satisfiable12, boolean satisfiable21, boolean s1, boolean s2) {
 		if (satisfiable12 && satisfiable21) {
 			return "incomparable";
