@@ -30,6 +30,7 @@ import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.ast.Sig.PrimSig;
 import edu.mit.csail.sdg.ast.Sig.SubsetSig;
 import edu.mit.csail.sdg.ast.Type;
+import edu.mit.csail.sdg.ast.ExprUnary.Op;
 import edu.mit.csail.sdg.ast.Type.ProductType;
 
 public class ModuleMerger {
@@ -501,7 +502,43 @@ public class ModuleMerger {
 					Field f = fields.get(nextField);
 					try {
 						sigOverrideForField = s.label;
-						s.addField(f.label, replaceSigRefs(f.decl().expr, List.of(s.decl), inV1));
+						Expr bound = replaceSigRefs(f.decl().expr, List.of(s.decl), inV1);
+						if ((inV1?v1iu:v2iu).getFieldsFromSubsetSig().contains(f)) {
+							// we have a field from a SubsetSig
+							if (bound instanceof ExprUnary) {
+								// operator needs to be adapted
+								Expr origBound = bound;
+								ExprUnary.Op op = getMergeOp(((ExprUnary) bound).op, Op.NO);
+								bound = op.make(f.pos, ((ExprUnary) bound).sub);			
+								if (inV1) {
+									Decl ths = s.decl;
+									Expr quantBody1 = ths.get().join(f).in(origBound);
+									quantBody1 = ExprITE.make(f.pos, ths.get().in(sigs.get(f.sig.label + "_v1")), quantBody1, ths.get().join(f).no());
+									Expr e1mult = ExprQt.Op.ALL.make(f.pos, f.closingBracket, List.of(ths), quantBody1);
+									c1 = c1.and(e1mult);
+								} else {
+									Decl ths = s.decl;
+									Expr quantBody2 = ths.get().join(f).in(origBound);
+									quantBody2 = ExprITE.make(f.pos, ths.get().in(sigs.get(f.sig.label + "_v2")), quantBody2, ths.get().join(f).no());
+									Expr e2mult = ExprQt.Op.ALL.make(f.pos, f.closingBracket, List.of(ths), quantBody2);
+									c2 = c2.and(e2mult);
+								}							
+							} else {
+								// field needs to be suppressed
+								if (inV1) {
+									Decl ths = s.decl;
+									Expr quantBody1 = ths.get().in(sigs.get(f.sig.label + "_v1")).or(ths.get().join(f).no());
+									Expr e1mult = ExprQt.Op.ALL.make(f.pos, f.closingBracket, List.of(ths), quantBody1);
+									c1 = c1.and(e1mult);
+								} else {
+									Decl ths = s.decl;
+									Expr quantBody2 = ths.get().in(sigs.get(f.sig.label + "_v2")).or(ths.get().join(f).no());
+									Expr e2mult = ExprQt.Op.ALL.make(f.pos, f.closingBracket, List.of(ths), quantBody2);
+									c2 = c2.and(e2mult);
+								}															
+							}
+						}
+						s.addField(f.label, bound);
 						sigOverrideForField = null;
 						fieldsToAdd.pop();
 					} catch (RuntimeException e) {
@@ -537,8 +574,9 @@ public class ModuleMerger {
 			ExprUnary.Op op = getMergeOp(((ExprUnary) e).op, ExprUnary.Op.NO);
 			f = mergedSig.addField(field.label, op.make(field.pos, ((ExprUnary) e).sub));
 			Decl ths = mergedSig.decl;
-			if (inC1) {
+			if (inC1) {				
 				Expr quantBody = ths.get().join(f).in(e);
+				// restriction of fields from SubsetSigs
 				if (v1iu.getFieldsFromSubsetSig().contains(field)) {
 					quantBody = ExprITE.make(field.pos, ths.get().in(sigs.get(field.sig.label + "_v1")), quantBody, ths.get().join(f).no());
 				}
@@ -550,6 +588,7 @@ public class ModuleMerger {
 				c1 = c1.and(f.decl().get().no());
 
 				Expr quantBody = ths.get().join(f).in(e);
+				// restriction of fields from SubsetSigs
 				if (v2iu.getFieldsFromSubsetSig().contains(field)) {
 					quantBody = ExprITE.make(field.pos, ths.get().in(sigs.get(field.sig.label + "_v2")), quantBody, ths.get().join(f).no());
 				}
