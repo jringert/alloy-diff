@@ -130,7 +130,7 @@ public class ModuleMerger {
 			}
 		}
 
-		// do merge
+		// do merge of signatures
 		for (String sName : v1Sigs.keySet()) {
 			if (v2Sigs.containsKey(sName) && ! (v2Sigs.get(sName) instanceof SubsetSig)) {
 				// create a merged signature
@@ -216,6 +216,7 @@ public class ModuleMerger {
 			}
 		}
 
+		// add fields to merged signatures
 		for (String sName : sigs.keySet()) {
 			Sig s = sigs.get(sName);
 			if (s instanceof PrimSig) {
@@ -422,20 +423,28 @@ public class ModuleMerger {
 				ExprUnary e1 = (ExprUnary) replaceSigRefs(f1.decl().expr, names, true);
 				ExprUnary e2 = (ExprUnary) replaceSigRefs(f2.decl().expr, names, false);
 				Field f;
-				if (e1.isSame(e2)) {
-					f = mergedSig.addField(f1.label, e1.op.make(f1.pos, e1.sub));
-				} else {
-					Expr union = e1.sub.plus(e2.sub);
-					ExprUnary.Op op = getMergeOp(e1.op, e2.op);
-					f = mergedSig.addField(f1.label, op.make(f1.pos, union));
 
-					Decl ths = mergedSig.decl;
-					Expr e1mult = ExprQt.Op.ALL.make(f1.pos, f1.closingBracket, List.of(ths), ths.get().join(f).in(e1));
-					Expr e2mult = ExprQt.Op.ALL.make(f2.pos, f2.closingBracket, List.of(ths), ths.get().join(f).in(e2));
-
-					c1 = c1.and(e1mult);
-					c2 = c2.and(e2mult);
+				Expr union = e1.sub.isSame(e2.sub) ?e1.sub:e1.sub.plus(e2.sub);
+				ExprUnary.Op op = getMergeOp(e1.op, e2.op);
+				if (v1iu.getFieldsFromSubsetSig().contains(f1) || v2iu.getFieldsFromSubsetSig().contains(f2)) {
+					op = getMergeOp(op, ExprUnary.Op.NO);
 				}
+				f = mergedSig.addField(f1.label, op.make(f1.pos, union));
+
+				Decl ths = mergedSig.decl;
+				Expr quantBody1 = ths.get().join(f).in(e1);
+				if (v1iu.getFieldsFromSubsetSig().contains(f1)) {
+					quantBody1 = ExprITE.make(f1.pos, ths.get().in(sigs.get(f1.sig.label + "_v1")), quantBody1, ths.get().join(f).no());
+				}
+				Expr quantBody2 = ths.get().join(f).in(e2);
+				if (v2iu.getFieldsFromSubsetSig().contains(f2)) {
+					quantBody2 = ExprITE.make(f2.pos, ths.get().in(sigs.get(f2.sig.label + "_v2")), quantBody2, ths.get().join(f).no());
+				}
+				Expr e1mult = ExprQt.Op.ALL.make(f1.pos, f1.closingBracket, List.of(ths), quantBody1);
+				Expr e2mult = ExprQt.Op.ALL.make(f2.pos, f2.closingBracket, List.of(ths), quantBody2);
+
+				c1 = c1.and(e1mult);
+				c2 = c2.and(e2mult);
 			} else if (f1.decl().expr instanceof ExprBinary && f2.decl().expr instanceof ExprBinary) { // relational fields
 				Expr e1 = replaceSigRefs(f1.decl().expr, names, true);
 				Expr e2 = replaceSigRefs(f2.decl().expr, names, false);
@@ -447,8 +456,16 @@ public class ModuleMerger {
 					f = mergedSig.addField(f1.label, union);
 
 					Decl ths = mergedSig.decl;
-					Expr e1mult = ExprQt.Op.ALL.make(f1.pos, f1.closingBracket, List.of(ths), ths.get().join(f).in(e1));
-					Expr e2mult = ExprQt.Op.ALL.make(f2.pos, f2.closingBracket, List.of(ths), ths.get().join(f).in(e2));
+					Expr quantBody1 = ths.get().join(f).in(e1);
+					if (v1iu.getFieldsFromSubsetSig().contains(f1)) {
+						quantBody1 = ExprITE.make(f1.pos, ths.get().in(sigs.get(f1.sig.label + "_v1")), ths.get().join(f).in(e1), ths.get().join(f).no());
+					}
+					Expr quantBody2 = ths.get().join(f).in(e2);
+					if (v2iu.getFieldsFromSubsetSig().contains(f2)) {
+						quantBody2 = ExprITE.make(f2.pos, ths.get().in(sigs.get(f2.sig.label + "_v2")), ths.get().join(f).in(e2), ths.get().join(f).no());
+					}
+					Expr e1mult = ExprQt.Op.ALL.make(f1.pos, f1.closingBracket, List.of(ths), quantBody1);
+					Expr e2mult = ExprQt.Op.ALL.make(f2.pos, f2.closingBracket, List.of(ths), quantBody2);
 
 					c1 = c1.and(e1mult);
 					c2 = c2.and(e2mult);
@@ -521,21 +538,45 @@ public class ModuleMerger {
 			f = mergedSig.addField(field.label, op.make(field.pos, ((ExprUnary) e).sub));
 			Decl ths = mergedSig.decl;
 			if (inC1) {
-				Expr e1mult = ExprQt.Op.ALL.make(field.pos, field.closingBracket, List.of(ths), ths.get().join(f).in(e));
+				Expr quantBody = ths.get().join(f).in(e);
+				if (v1iu.getFieldsFromSubsetSig().contains(field)) {
+					quantBody = ExprITE.make(field.pos, ths.get().in(sigs.get(field.sig.label + "_v1")), quantBody, ths.get().join(f).no());
+				}
+				Expr e1mult = ExprQt.Op.ALL.make(field.pos, field.closingBracket, List.of(ths), quantBody);
 				c1 = c1.and(e1mult);
 
 				c2 = c2.and(f.decl().get().no());
 			} else {
 				c1 = c1.and(f.decl().get().no());
 
-				Expr e2mult = ExprQt.Op.ALL.make(field.pos, field.closingBracket, List.of(ths), ths.get().join(f).in(e));
+				Expr quantBody = ths.get().join(f).in(e);
+				if (v2iu.getFieldsFromSubsetSig().contains(field)) {
+					quantBody = ExprITE.make(field.pos, ths.get().in(sigs.get(field.sig.label + "_v2")), quantBody, ths.get().join(f).no());
+				}
+
+				Expr e2mult = ExprQt.Op.ALL.make(field.pos, field.closingBracket, List.of(ths), quantBody);
 				c2 = c2.and(e2mult);
 			}
 		} else if (e instanceof ExprBinary) {
 			f = mergedSig.addField(field.label, e);
 			if (inC1) {
+				if (v1iu.getFieldsFromSubsetSig().contains(field)) {
+					Decl ths = mergedSig.decl;
+					// make empty if not in SubsetSig
+					Expr quantBody = ths.get().in(sigs.get(field.sig.label + "_v1")).or(ths.get().join(f).no());
+					Expr e1mult = ExprQt.Op.ALL.make(field.pos, field.closingBracket, List.of(ths), quantBody);
+					c1 = c1.and(e1mult);
+				}
 				c2 = c2.and(f.decl().get().no());
 			} else {
+				if (v2iu.getFieldsFromSubsetSig().contains(field)) {
+					Decl ths = mergedSig.decl;
+					// make empty if not in SubsetSig
+					Expr quantBody = ths.get().in(sigs.get(field.sig.label + "_v2")).or(ths.get().join(f).no());
+					Expr e2mult = ExprQt.Op.ALL.make(field.pos, field.closingBracket, List.of(ths), quantBody);
+					c2 = c2.and(e2mult);
+				}
+				
 				c1 = c1.and(f.decl().get().no());
 			}
 		}
