@@ -5,11 +5,13 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
 
 import edu.mit.csail.sdg.ast.Module;
 import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.ast.Sig.PrimSig;
+import edu.mit.csail.sdg.ast.Sig.SubsetSig;
 
 public class InheritanceUtil {
 	/**
@@ -21,6 +23,12 @@ public class InheritanceUtil {
 	 * all primitive signatures inheriting from the parent
 	 */
 	private Map<Sig, Set<Sig>> subSigs = new LinkedHashMap<Sig, Set<Sig>>();
+
+	/**
+	 * Fields that are contributed by subsetsignatures (stores most specific origin
+	 * signature)
+	 */
+	private Set<Field> fieldsFromSubsetSig = new LinkedHashSet<>();
 
 	public InheritanceUtil(Module m) {
 		for (Sig s : m.getAllReachableSigs()) {
@@ -59,6 +67,48 @@ public class InheritanceUtil {
 
 			}
 		}
+
+		// add fields contributed by SubsetSigs (to PrimSig parents and all their
+		// children)
+		for (Sig s : m.getAllReachableSigs()) {
+			if (s instanceof SubsetSig && !s.builtin) {
+				Set<Sig> flatParents = getFlattenedParents((SubsetSig) s);
+				for (Field f : s.getFields()) {
+					fieldsFromSubsetSig.add(f);
+					for (Sig c : flatParents) {
+						allFields.get(c).add(f);
+					}
+				}
+			}
+		}
+
+	}
+
+	/**
+	 * computes all signatures that are parents of the subset signature s (includes
+	 * inherited parents, e.g., SubSig-children of parents)
+	 * 
+	 * @param s
+	 * @return
+	 */
+	public Set<Sig> getFlattenedParents(SubsetSig s) {
+		Set<Sig> flatParents = new LinkedHashSet<>();
+		if (!s.builtin) {
+			Stack<Sig> pStack = new Stack<>();
+			pStack.addAll(s.parents);
+			while (!pStack.isEmpty()) {
+				Sig p = pStack.pop();
+				if (p instanceof SubsetSig) {
+					pStack.addAll(((SubsetSig) p).parents);
+				} else {
+					flatParents.add(p);
+					if (subSigs.get(p) != null) {
+						flatParents.addAll(subSigs.get(p));
+					}
+				}
+			}
+		}
+		return flatParents;
 	}
 
 	/**
@@ -122,7 +172,8 @@ public class InheritanceUtil {
 	}
 	
 	/**
-	 * get all top level signatures that have at least one child 
+	 * get all top level signatures that have at least one child
+	 * 
 	 * @return
 	 */
 	public Set<Sig> getTopLvlSigsWithChildren() {
@@ -131,12 +182,13 @@ public class InheritanceUtil {
 		for (Set<Sig> children : subSigs.values()) {
 			ts.removeAll(children);
 		}
-		
+
 		return ts;
 	}
-	
+
 	/**
-	 * get all signatures that have at least one child 
+	 * get all signatures that have at least one child
+	 * 
 	 * @return
 	 */
 	public Set<Sig> getParentSigs() {
@@ -144,22 +196,30 @@ public class InheritanceUtil {
 		ps.addAll(subSigs.keySet());
 		return ps;
 	}
-	
+
 	/**
 	 * get parent signature
-	 *  
+	 * 
 	 * @return null if signature is its own parent
 	 */
 	public Sig getParentSig(Sig child) {
 		Set<Sig> top = getTopLvlSigsWithChildren();
-		if (top.contains(child)) { 
+		if (top.contains(child)) {
 			return null;
-		}		
+		}
 		for (Sig parent : top) {
 			if (subSigs.get(parent).contains(child)) {
 				return parent;
 			}
 		}
 		return null;
+	}
+	
+	/**
+	 * get all fields that are defined in SubsetSigs 
+	 * @return
+	 */
+	public Set<Field> getFieldsFromSubsetSig() {
+		return fieldsFromSubsetSig;
 	}
 }

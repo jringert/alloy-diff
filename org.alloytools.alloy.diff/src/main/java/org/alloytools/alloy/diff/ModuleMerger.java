@@ -191,28 +191,43 @@ public class ModuleMerger {
 		// add subset signatures
 		for (Sig s : v1Sigs.values()) {
 			if (s instanceof SubsetSig) {
-				SubsetSig sv1 = new SubsetSig(s.label + "_v1", getParentSigs((SubsetSig) s, v1iu));
+				Set<Sig> parents = new LinkedHashSet<>();
+				for (Sig p : v1iu.getFlattenedParents((SubsetSig) s)) {
+					Sig c = sigs.get(p.label);
+					if (c != null) { // could be the case for abstract signatures
+						parents.add(c);
+					}
+				}
+				SubsetSig sv1 = new SubsetSig(s.label + "_v1", parents);
 				sigs.put(s.label + "_v1", sv1);
 			}
 		}
 		for (Sig s : v2Sigs.values()) {
 			if (s instanceof SubsetSig) {
-				SubsetSig sv2 = new SubsetSig(s.label + "_v2", getParentSigs((SubsetSig) s, v2iu));
+				Set<Sig> parents = new LinkedHashSet<>();
+				for (Sig p : v2iu.getFlattenedParents((SubsetSig) s)) {
+					Sig c = sigs.get(p.label);
+					if (c != null) { // could be the case for abstract signatures
+						parents.add(c);
+					}
+				}
+				SubsetSig sv2 = new SubsetSig(s.label + "_v2", parents);
 				sigs.put(s.label + "_v2", sv2);
 			}
 		}
 
 		for (String sName : sigs.keySet()) {
 			Sig s = sigs.get(sName);
-			// TODO inheritance util should add fields of subset sigs as optional fields
-			Sig s1 = v1Sigs.get(sName);
-			Sig s2 = v2Sigs.get(sName);
-			if (s1 != null && s2 != null) {
-				mergeFields(s, mapOf(v1iu.getAllFields(s1)), mapOf(v2iu.getAllFields(s2)));
-			} else if (s1 != null) {
-				addFieldsOfUniqueSig(s, mapOf(v1iu.getAllFields(s1)), true);
-			} else {
-				addFieldsOfUniqueSig(s, mapOf(v2iu.getAllFields(s2)), false);
+			if (s instanceof PrimSig) {
+				Sig s1 = v1Sigs.get(sName);
+				Sig s2 = v2Sigs.get(sName);
+				if (s1 != null && s2 != null) {
+					mergeFields(s, mapOf(v1iu.getAllFields(s1)), mapOf(v2iu.getAllFields(s2)));
+				} else if (s1 != null) {
+					addFieldsOfUniqueSig(s, mapOf(v1iu.getAllFields(s1)), true);
+				} else {
+					addFieldsOfUniqueSig(s, mapOf(v2iu.getAllFields(s2)), false);
+				}
 			}
 		}
 
@@ -227,30 +242,6 @@ public class ModuleMerger {
 		return sigs.values();
 	}
 
-	/**
-	 * calculates the merged singatures from sigs corresponding to the parent
-	 * signatures of this subset sig
-	 * 
-	 * @param s
-	 * @param iu
-	 * @return
-	 */
-	private Collection<Sig> getParentSigs(SubsetSig s, InheritanceUtil iu) {
-		Set<Sig> parents = new LinkedHashSet<>();
-		if (sigs.containsKey(s.label)) {
-			parents.add(sigs.get(s.label));
-		}
-		for (Sig pV : s.parents) {
-			if (iu.getSubSigs(pV) != null) {
-				for (Sig c : iu.getSubSigs(pV)) {
-					if (sigs.containsKey(c.label)) {
-						parents.add(sigs.get(c.label));
-					}
-				}
-			}
-		}
-		return parents;
-	}
 
 	private Map<String, Field> mapOf(Set<Field> allFields) {
 		Map<String, Field> m = new LinkedHashMap<>();
@@ -302,25 +293,35 @@ public class ModuleMerger {
 				Expr fu = getField(sigs.get(owner.label), f.label);
 				// all fields of children signatures
 				for (Sig s : iu.getSubSigs(owner)) {
-					if (iu.getSubSigs(owner) != null) {
-						if (fu == null) {
-							fu = getField(sigs.get(s.label), f.label);
-						} else {
-							fu = fu.plus(getField(sigs.get(s.label), f.label));
-						}
+					if (fu == null) {
+						fu = getField(sigs.get(s.label), f.label);
+					} else {
+						fu = fu.plus(getField(sigs.get(s.label), f.label));
 					}
 				}
 				fieldExpr.put(id, fu);
 			}
 		}
+		for (Field f : iu.getFieldsFromSubsetSig()) {
+			Sig owner = f.sig;
+			String id = owner.label + "." + f.label;
+			Expr fu = null;
+			for (Sig s : iu.getFlattenedParents((SubsetSig) owner)) {
+				if (fu == null) {
+					fu = getField(sigs.get(s.label), f.label);
+				} else {
+					fu = fu.plus(getField(sigs.get(s.label), f.label));
+				}				
+			}
+			fieldExpr.put(id, fu);
+		}
 	}
 
 	private void buildInheritanceSigExpr(Module m, InheritanceUtil iu, Map<String, Expr> sigExpr) {
 		for (Sig parent : m.getAllReachableUserDefinedSigs()) {
-			Set<Sig> mSubSigs = iu.getSubSigs(parent);
-			if (mSubSigs != null) {
-				Expr union = sigs.get(parent.label);
-				for (Sig s : mSubSigs) {
+			if (parent instanceof SubsetSig) {
+				Expr union = null;
+				for (Sig s : iu.getFlattenedParents((SubsetSig)parent)) {
 					// take care of null sigs that were not added
 					if (sigs.get(s.label) != null) {
 						if (union == null) {
@@ -331,6 +332,22 @@ public class ModuleMerger {
 					}
 				}
 				sigExpr.put(parent.label, union);
+			} else {
+				Set<Sig> mSubSigs = iu.getSubSigs(parent);
+				if (mSubSigs != null) {
+					Expr union = sigs.get(parent.label);
+					for (Sig s : mSubSigs) {
+						// take care of null sigs that were not added
+						if (sigs.get(s.label) != null) {
+							if (union == null) {
+								union = sigs.get(s.label);
+							} else {
+								union = union.plus(sigs.get(s.label));
+							}
+						}
+					}
+					sigExpr.put(parent.label, union);
+				}
 			}
 		}
 	}
@@ -357,7 +374,7 @@ public class ModuleMerger {
 	 * require changing all expressions on fields.
 	 * 
 	 * FIXME the stack could run into a cycle: break the cycle by adding a field
-	 * with its type (no syntactical restriction)
+	 * with its type (i.e., no syntactical restriction)
 	 *
 	 * @param mergedSig
 	 * @param fields1
@@ -587,8 +604,14 @@ public class ModuleMerger {
 				}
 			}
 			return s;
-		case "SubsetSig":
+		case "SubsetSig": 
 			SubsetSig sub = (SubsetSig) expr;
+			// expressions taking care of inheritance override normal signatures
+			if (inV1 && v1SigExpr.get(sub.label) != null) {
+				return v1SigExpr.get(sub.label);
+			} else if (!inV1 && v2SigExpr.get(sub.label) != null) {
+				return v2SigExpr.get(sub.label);
+			}
 			return sigs.get(sub.label + (inV1?"_v1":"_v2"));
 		case "ExprList":
 			ExprList el = (ExprList) expr;

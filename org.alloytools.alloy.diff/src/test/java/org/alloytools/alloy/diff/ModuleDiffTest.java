@@ -126,7 +126,9 @@ public class ModuleDiffTest {
 				ModuleDiff.diff(previous.toString(), f.toString(),3, true);
 			} catch (Exception e) {
 				previous = f;
-				throw e;
+				if (e.getMessage() == null || !e.getMessage().contains("Ordering")) {
+					throw e;
+				}
 			}
 		}
 		previous = f;
