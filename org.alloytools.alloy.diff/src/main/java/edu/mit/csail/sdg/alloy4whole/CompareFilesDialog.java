@@ -119,7 +119,7 @@ public class CompareFilesDialog extends JDialog {
 	protected final void initUI() {
 		// setResizable(false);
 		JLabel dialogLabel = new JLabel();
-		dialogLabel.setText("Find instances of Right file that are not instances of Left file");
+		dialogLabel.setText("Compare Alloy Models by computing differences.");
 
 		dialogLabel.setFont(new Font(FontName.get(), Font.PLAIN, FontSize.get()));
 		;
@@ -133,17 +133,17 @@ public class CompareFilesDialog extends JDialog {
 			tabListNames.add(tab.getFilename().substring(tab.getFilename().lastIndexOf('\\') + 1));
 		}
 
-		StringChoicePref tabNamesLeft = new StringChoicePref("LeftFile", "Left File", tabListNames);
-		StringChoicePref tabNamesRight = new StringChoicePref("RightFile", "Right File", tabListNames);
+		StringChoicePref tabNamesLeft = new StringChoicePref("LeftFile", "Find instances of ", tabListNames);
+		StringChoicePref tabNamesRight = new StringChoicePref("RightFile", "that are not instances of", tabListNames);
 
-		JButton compareButton = new JButton("Compare");
+		JButton compareButton = new JButton("Compute Diff");
 
 		tabNamesLeft.set(currentViewFile.substring(currentViewFile.lastIndexOf('\\') + 1));
 		tabNamesRight.setSelectedIndex(0);
 
 		add(makeGrid(dialogLabel, mkCombo(tabNamesLeft), mkCombo(tabNamesRight), mkButton(compareButton)));
 
-		setTitle("Compare Alloy Models");
+		setTitle("Semantic Difference of Alloy Models");
 
 		pack();
 		setSize(getSize().width + 5, getSize().height + 5);

@@ -2,6 +2,8 @@ package edu.mit.csail.sdg.alloy4whole;
 
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.io.File;
+import java.io.IOException;
 
 import javax.swing.JMenu;
 
@@ -11,8 +13,16 @@ import edu.mit.csail.sdg.alloy4viz.VizGUI;
 import edu.mit.csail.sdg.translator.A4Solution;
 
 public class Compare {
+	
+	static {
+		try {
+			ALLOY_EXAMPLE_OUTPUT_XML = File.createTempFile("alloyInst", ".xml").getAbsolutePath();
+		} catch (IOException e) {
+			ALLOY_EXAMPLE_OUTPUT_XML = "alloy_example_output.xml";
+		}
+	}
 
-	private static final String ALLOY_EXAMPLE_OUTPUT_XML = "alloy_example_output.xml";
+	private static String ALLOY_EXAMPLE_OUTPUT_XML;
 	public static A4Solution ans;
 	public static VizGUI viz;
 
@@ -26,10 +36,9 @@ public class Compare {
 
 		}
 		
-		ans = ModuleDiff.diff(leftFile, rightFile, true);
+		ans = ModuleDiff.diff(rightFile, leftFile, true);
 
 		if (ans.satisfiable()) {
-			ans.writeXML("alloy_compare_output.xml");
 			if (log != null) {
 				log.log("\nInstance Found. Visualizer opened.\n");
 			} else {
