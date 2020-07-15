@@ -1,6 +1,4 @@
 
-Main-Class: edu.mit.csail.sdg.alloy4whole.SimpleGUIDiff
-
 -buildpath: \
 	org.alloytools.alloy.application,\
 	org.alloytools.alloy.core,\
@@ -10,8 +8,7 @@ Main-Class: edu.mit.csail.sdg.alloy4whole.SimpleGUIDiff
 	org.alloytools.kodkod.nativesat.amd64-linux;version=latest,\
 	org.alloytools.kodkod.nativesat.util;version=latest,\
 	org.alloytools.kodkod.nativesat.x86-linux;version=latest,\
-	org.alloytools.kodkod.nativesat.x86-mac;version=latest,\
-	org.alloytools.alloy.diff;version=latest
+	org.alloytools.kodkod.nativesat.x86-mac;version=latest
 	
 
 -sources: false
@@ -26,5 +23,4 @@ Main-Class: edu.mit.csail.sdg.alloy4whole.SimpleGUIDiff
 	@${repo;org.alloytools.kodkod.nativesat.x86-linux}, \
 	@${repo;org.alloytools.kodkod.nativesat.x86-mac}, \
 	@${repo;org.alloytools.kodkod.nativesat.x86-windows}, \
-	@${repo;org.sat4j.core}, \
-	LICENSES
+	@${repo;org.sat4j.core}
