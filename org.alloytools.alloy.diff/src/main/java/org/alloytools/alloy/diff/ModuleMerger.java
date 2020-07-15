@@ -1108,7 +1108,7 @@ public class ModuleMerger {
 		for (Attr a1 : s1.attributes) {
 			for (Attr a2 : s2.attributes) {
 				if (a1 != null && a2 != null && a1.type.equals(a2.type)) {
-					attrs.add(new Attr(a1.type, null));
+					attrs.add(a1.type.make(a1.pos));
 				}
 			}
 		}

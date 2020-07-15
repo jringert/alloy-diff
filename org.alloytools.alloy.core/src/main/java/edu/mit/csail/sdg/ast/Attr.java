@@ -198,7 +198,7 @@ public final class Attr {
      * Construct an attribute of the given type with the given position; if
      * pos==null, it is treated as Pos.UNKNOWN.
      */
-    public Attr(AttrType type, Pos pos) {
+    private Attr(AttrType type, Pos pos) {
         this.type = type;
         this.pos = (pos == null ? Pos.UNKNOWN : pos);
     }
