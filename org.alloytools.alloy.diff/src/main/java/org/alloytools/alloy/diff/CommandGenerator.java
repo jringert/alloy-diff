@@ -8,7 +8,7 @@ import edu.mit.csail.sdg.ast.ExprConstant;
 import edu.mit.csail.sdg.ast.Module;
 import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.translator.A4Options;
-import edu.mit.csail.sdg.translator.ScopeComputer;
+import edu.mit.csail.sdg.translator.MyScopeComputer;
 
 public class CommandGenerator {
 
@@ -55,10 +55,10 @@ public class CommandGenerator {
 		}
 
 		Command cmd4scope = new Command(false, scope, -1, -1, ExprConstant.TRUE);
-		ScopeComputer sc1 = ScopeComputer.compute(new A4Reporter(), new A4Options(), m.v1Sigs.values(), cmd4scope).b;
-		ScopeComputer sc1orig = ScopeComputer.compute(new A4Reporter(), new A4Options(), m.v1Sigs.values(), cmd1).b;
-		ScopeComputer sc2 = ScopeComputer.compute(new A4Reporter(), new A4Options(), m.v2Sigs.values(), cmd4scope).b;
-		ScopeComputer sc2orig = ScopeComputer.compute(new A4Reporter(), new A4Options(), m.v2Sigs.values(), cmd2).b;
+		MyScopeComputer sc1 = MyScopeComputer.compute(new A4Reporter(), new A4Options(), m.v1Sigs.values(), cmd4scope);
+		MyScopeComputer sc1orig = MyScopeComputer.compute(new A4Reporter(), new A4Options(), m.v1Sigs.values(), cmd1);
+		MyScopeComputer sc2 = MyScopeComputer.compute(new A4Reporter(), new A4Options(), m.v2Sigs.values(), cmd4scope);
+		MyScopeComputer sc2orig = MyScopeComputer.compute(new A4Reporter(), new A4Options(), m.v2Sigs.values(), cmd2);
 		if (!withPred) {
 			sc1orig = sc1;
 			sc2orig = sc2;

@@ -189,6 +189,8 @@ public class ModuleMerger {
 		buildInheritanceSigExpr(v1, v1iu, v1SigExpr);
 		buildInheritanceSigExpr(v2, v2iu, v2SigExpr);
 
+		//FIXME we don't support merging SubsetSig and PrimSig 
+		
 		// add subset signatures
 		for (Sig s : v1Sigs.values()) {
 			if (s instanceof SubsetSig) {
@@ -216,6 +218,12 @@ public class ModuleMerger {
 				sigs.put(s.label + "_v2", sv2);
 			}
 		}
+		
+		// create SubsetSig as union from both modules
+		// suppress additional sigs in each c1/c2
+		// suppress new SubsetSig in opposite module
+		
+		// for sig A in B ... {} add c1/c2 A in B		
 
 		// add fields to merged signatures
 		for (String sName : sigs.keySet()) {
@@ -686,13 +694,7 @@ public class ModuleMerger {
 			return s;
 		case "SubsetSig": 
 			SubsetSig sub = (SubsetSig) expr;
-			// expressions taking care of inheritance override normal signatures
-			if (inV1 && v1SigExpr.get(sub.label) != null) {
-				return v1SigExpr.get(sub.label);
-			} else if (!inV1 && v2SigExpr.get(sub.label) != null) {
-				return v2SigExpr.get(sub.label);
-			}
-			return sigs.get(sub.label + (inV1?"_v1":"_v2"));
+			return sigs.get(sub.label);
 		case "ExprList":
 			ExprList el = (ExprList) expr;
 			List<Expr> l = new ArrayList<Expr>();
