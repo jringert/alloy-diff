@@ -22,6 +22,7 @@ import edu.mit.csail.sdg.ast.ExprLet;
 import edu.mit.csail.sdg.ast.ExprList;
 import edu.mit.csail.sdg.ast.ExprQt;
 import edu.mit.csail.sdg.ast.ExprUnary;
+import edu.mit.csail.sdg.ast.ExprUnary.Op;
 import edu.mit.csail.sdg.ast.ExprVar;
 import edu.mit.csail.sdg.ast.Func;
 import edu.mit.csail.sdg.ast.Module;
@@ -30,7 +31,6 @@ import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.ast.Sig.PrimSig;
 import edu.mit.csail.sdg.ast.Sig.SubsetSig;
 import edu.mit.csail.sdg.ast.Type;
-import edu.mit.csail.sdg.ast.ExprUnary.Op;
 import edu.mit.csail.sdg.ast.Type.ProductType;
 
 public class ModuleMerger {
@@ -89,7 +89,7 @@ public class ModuleMerger {
 	 * to subsignatures
 	 */
 	private String sigOverrideForField;
-	
+
 	protected int maxInt;
 
 	/**
@@ -116,7 +116,7 @@ public class ModuleMerger {
 		c1 = ExprConstant.TRUE;
 		c2 = ExprConstant.TRUE;
 		maxInt = 0;
-		
+
 		// fill look-up tables
 		for (Sig s : v1.getAllReachableUserDefinedSigs()) {
 			v1Sigs.put(s.toString(), s);
@@ -133,7 +133,7 @@ public class ModuleMerger {
 
 		// do merge of signatures
 		for (String sName : v1Sigs.keySet()) {
-			if (v2Sigs.containsKey(sName) && ! (v2Sigs.get(sName) instanceof SubsetSig)) {
+			if (v2Sigs.containsKey(sName) && !(v2Sigs.get(sName) instanceof SubsetSig)) {
 				// create a merged signature
 				Sig s1 = v1Sigs.get(sName);
 				Sig s2 = v2Sigs.get(sName);
@@ -189,41 +189,89 @@ public class ModuleMerger {
 		buildInheritanceSigExpr(v1, v1iu, v1SigExpr);
 		buildInheritanceSigExpr(v2, v2iu, v2SigExpr);
 
-		//FIXME we don't support merging SubsetSig and PrimSig 
-		
-		// add subset signatures
+		// INFO we don't support merging SubsetSig and PrimSig
+
+		// create SubsetSig as union from both modules
+		for (Sig s1 : v1Sigs.values()) {
+			if (s1 instanceof SubsetSig) {
+				Set<Sig> ps1 = parents((SubsetSig) s1);
+				Sig s2 = v2Sigs.get(s1.label);
+				if (s2 != null) {
+					if (s2 instanceof SubsetSig) {
+						Set<Sig> ps2 = parents((SubsetSig)s2);
+						Set<Sig> union = new LinkedHashSet<>();
+						union.addAll(ps1);
+						union.addAll(ps2);
+
+						SubsetSig sub = new SubsetSig(s1.label, union);
+						sigs.put(s1.label, sub);
+						
+						// suppress additional sigs in each c1/c2
+						Set<Sig> notInV1 = new LinkedHashSet<>();
+						Set<Sig> notInV2 = new LinkedHashSet<>();
+						notInV1.addAll(ps2);
+						notInV1.removeAll(ps1);
+						notInV2.addAll(ps1);
+						notInV2.removeAll(ps2);
+						for (Sig s : notInV1) {
+							c1 = c1.and(s.in(sub).not());
+						}
+						for (Sig s : notInV2) {
+							c2 = c2.and(s.in(sub).not());
+						}
+					} else {
+						throw new RuntimeException("Cannot merge PrimSig and SubsetSig with same name: " + s1.label);
+					}
+				} else {
+					// add v1 unique SubsetSig and suppress in v2 
+					SubsetSig subV1 = new SubsetSig(s1.label, ps1);
+					sigs.put(s1.label, subV1);
+					c2 = c2.and(subV1.no());
+				}
+			}
+		}
+		// add v2 unique SubsetSig and suppress in v1 
+		for (Sig s2 : v2Sigs.values()) {			
+			if (s2 instanceof SubsetSig) {
+				if (sigs.get(s2.label) == null) {
+					Set<Sig> ps2 = parents((SubsetSig) s2);
+					SubsetSig subV2 = new SubsetSig(s2.label, ps2);
+					sigs.put(s2.label, subV2);
+					c1 = c1.and(subV2.no());				
+				} else if (sigs.get(s2.label) instanceof PrimSig) {
+					throw new RuntimeException("Cannot merge PrimSig and SubsetSig with same name: " + s2.label);
+				}
+			}
+		}
+
+		// add containment of SubsetSigs in hierarchy:
+		// for sig A in B ... {} add c1/c2 A in B
 		for (Sig s : v1Sigs.values()) {
 			if (s instanceof SubsetSig) {
-				Set<Sig> parents = new LinkedHashSet<>();
-				for (Sig p : v1iu.getFlattenedParents((SubsetSig) s)) {
-					Sig c = sigs.get(p.label);
-					if (c != null) { // could be the case for abstract signatures
-						parents.add(c);
+				SubsetSig sub = (SubsetSig) s;
+				for (int i = 0; i < sub.parents.size(); i++) {
+					Sig parent = sub.parents.get(i);
+					if (parent instanceof SubsetSig) {
+						Sig p = sigs.get(parent.label);
+						Sig c = sigs.get(sub.label);
+						c1 = c1.and(c.in(p));
 					}
 				}
-				SubsetSig sv1 = new SubsetSig(s.label + "_v1", parents);
-				sigs.put(s.label + "_v1", sv1);
 			}
 		}
 		for (Sig s : v2Sigs.values()) {
 			if (s instanceof SubsetSig) {
-				Set<Sig> parents = new LinkedHashSet<>();
-				for (Sig p : v2iu.getFlattenedParents((SubsetSig) s)) {
-					Sig c = sigs.get(p.label);
-					if (c != null) { // could be the case for abstract signatures
-						parents.add(c);
+				SubsetSig sub = (SubsetSig) s;
+				for (int i = 0; i < sub.parents.size(); i++) {
+					Sig parent = sub.parents.get(i);
+					if (parent instanceof SubsetSig) {
+						Sig p = sigs.get(parent.label);
+						Sig c = sigs.get(sub.label);
+						c2 = c2.and(c.in(p));
 					}
 				}
-				SubsetSig sv2 = new SubsetSig(s.label + "_v2", parents);
-				sigs.put(s.label + "_v2", sv2);
 			}
 		}
-		
-		// create SubsetSig as union from both modules
-		// suppress additional sigs in each c1/c2
-		// suppress new SubsetSig in opposite module
-		
-		// for sig A in B ... {} add c1/c2 A in B		
 
 		// add fields to merged signatures
 		for (String sName : sigs.keySet()) {
@@ -252,6 +300,23 @@ public class ModuleMerger {
 		return sigs.values();
 	}
 
+	/**
+	 * compute a set of transitive parent PrimSigs (merged sigs in new module)
+	 * 
+	 * @param sub1
+	 * @return
+	 */
+	private Set<Sig> parents(SubsetSig sub1) {
+		Set<Sig> parents = new LinkedHashSet<>();
+		for (Sig p : v1iu.getFlattenedParents(sub1)) {
+			Sig c = sigs.get(p.label);
+			if (c != null) { // could be the case for abstract signatures
+				parents.add(c);
+			}
+		}
+
+		return parents;
+	}
 
 	private Map<String, Field> mapOf(Set<Field> allFields) {
 		Map<String, Field> m = new LinkedHashMap<>();
@@ -290,7 +355,7 @@ public class ModuleMerger {
 
 	/**
 	 * calculate field expressions by union of fields with the same name of sub
-	 * signatures
+	 * signatures and fieldexpressions for SubsetSigs 
 	 * 
 	 * @param m
 	 * @param fieldExpr
@@ -321,7 +386,7 @@ public class ModuleMerger {
 					fu = getField(sigs.get(s.label), f.label);
 				} else {
 					fu = fu.plus(getField(sigs.get(s.label), f.label));
-				}				
+				}
 			}
 			fieldExpr.put(id, fu);
 		}
@@ -331,7 +396,7 @@ public class ModuleMerger {
 		for (Sig parent : m.getAllReachableUserDefinedSigs()) {
 			if (parent instanceof SubsetSig) {
 				Expr union = null;
-				for (Sig s : iu.getFlattenedParents((SubsetSig)parent)) {
+				for (Sig s : iu.getFlattenedParents((SubsetSig) parent)) {
 					// take care of null sigs that were not added
 					if (sigs.get(s.label) != null) {
 						if (union == null) {
@@ -410,9 +475,11 @@ public class ModuleMerger {
 						sigOverrideForField = null;
 						fieldsToAdd.pop();
 					} catch (RuntimeException e) {
-						if (e.getMessage().contains("Could not find merged field ")) {
+						if (e.getMessage() != null && e.getMessage().contains("Could not find merged field ")) {
 							String missingField = e.getMessage().replace("Could not find merged field ", "");
 							fieldsToAdd.push(missingField);
+						} else {
+							throw e;
 						}
 					}
 				} else {
@@ -433,7 +500,7 @@ public class ModuleMerger {
 				ExprUnary e2 = (ExprUnary) replaceSigRefs(f2.decl().expr, names, false);
 				Field f;
 
-				Expr union = e1.sub.isSame(e2.sub) ?e1.sub:e1.sub.plus(e2.sub);
+				Expr union = e1.sub.isSame(e2.sub) ? e1.sub : e1.sub.plus(e2.sub);
 				ExprUnary.Op op = getMergeOp(e1.op, e2.op);
 				if (v1iu.getFieldsFromSubsetSig().contains(f1) || v2iu.getFieldsFromSubsetSig().contains(f2)) {
 					op = getMergeOp(op, ExprUnary.Op.NO);
@@ -443,18 +510,21 @@ public class ModuleMerger {
 				Decl ths = mergedSig.decl;
 				Expr quantBody1 = ths.get().join(f).in(e1);
 				if (v1iu.getFieldsFromSubsetSig().contains(f1)) {
-					quantBody1 = ExprITE.make(f1.pos, ths.get().in(sigs.get(f1.sig.label + "_v1")), quantBody1, ths.get().join(f).no());
+					quantBody1 = ExprITE.make(f1.pos, ths.get().in(sigs.get(f1.sig.label)), quantBody1,
+							ths.get().join(f).no());
 				}
 				Expr quantBody2 = ths.get().join(f).in(e2);
 				if (v2iu.getFieldsFromSubsetSig().contains(f2)) {
-					quantBody2 = ExprITE.make(f2.pos, ths.get().in(sigs.get(f2.sig.label + "_v2")), quantBody2, ths.get().join(f).no());
+					quantBody2 = ExprITE.make(f2.pos, ths.get().in(sigs.get(f2.sig.label)), quantBody2,
+							ths.get().join(f).no());
 				}
 				Expr e1mult = ExprQt.Op.ALL.make(f1.pos, f1.closingBracket, List.of(ths), quantBody1);
 				Expr e2mult = ExprQt.Op.ALL.make(f2.pos, f2.closingBracket, List.of(ths), quantBody2);
 
 				c1 = c1.and(e1mult);
 				c2 = c2.and(e2mult);
-			} else if (f1.decl().expr instanceof ExprBinary && f2.decl().expr instanceof ExprBinary) { // relational fields
+			} else if (f1.decl().expr instanceof ExprBinary && f2.decl().expr instanceof ExprBinary) { // relational
+																										// fields
 				Expr e1 = replaceSigRefs(f1.decl().expr, names, true);
 				Expr e2 = replaceSigRefs(f2.decl().expr, names, false);
 				Field f;
@@ -467,11 +537,13 @@ public class ModuleMerger {
 					Decl ths = mergedSig.decl;
 					Expr quantBody1 = ths.get().join(f).in(e1);
 					if (v1iu.getFieldsFromSubsetSig().contains(f1)) {
-						quantBody1 = ExprITE.make(f1.pos, ths.get().in(sigs.get(f1.sig.label + "_v1")), ths.get().join(f).in(e1), ths.get().join(f).no());
+						quantBody1 = ExprITE.make(f1.pos, ths.get().in(sigs.get(f1.sig.label)),
+								ths.get().join(f).in(e1), ths.get().join(f).no());
 					}
 					Expr quantBody2 = ths.get().join(f).in(e2);
 					if (v2iu.getFieldsFromSubsetSig().contains(f2)) {
-						quantBody2 = ExprITE.make(f2.pos, ths.get().in(sigs.get(f2.sig.label + "_v2")), ths.get().join(f).in(e2), ths.get().join(f).no());
+						quantBody2 = ExprITE.make(f2.pos, ths.get().in(sigs.get(f2.sig.label)),
+								ths.get().join(f).in(e2), ths.get().join(f).no());
 					}
 					Expr e1mult = ExprQt.Op.ALL.make(f1.pos, f1.closingBracket, List.of(ths), quantBody1);
 					Expr e2mult = ExprQt.Op.ALL.make(f2.pos, f2.closingBracket, List.of(ths), quantBody2);
@@ -511,44 +583,49 @@ public class ModuleMerger {
 					try {
 						sigOverrideForField = s.label;
 						Expr bound = replaceSigRefs(f.decl().expr, List.of(s.decl), inV1);
-						if ((inV1?v1iu:v2iu).getFieldsFromSubsetSig().contains(f)) {
+						Field merged = s.addField(f.label, bound);
+						sigOverrideForField = null;
+						fieldsToAdd.pop();
+
+						if ((inV1 ? v1iu : v2iu).getFieldsFromSubsetSig().contains(f)) {
 							// we have a field from a SubsetSig
 							if (bound instanceof ExprUnary) {
 								// operator needs to be adapted
 								Expr origBound = bound;
 								ExprUnary.Op op = getMergeOp(((ExprUnary) bound).op, Op.NO);
-								bound = op.make(f.pos, ((ExprUnary) bound).sub);			
+								bound = op.make(f.pos, ((ExprUnary) bound).sub);
 								if (inV1) {
 									Decl ths = s.decl;
-									Expr quantBody1 = ths.get().join(f).in(origBound);
-									quantBody1 = ExprITE.make(f.pos, ths.get().in(sigs.get(f.sig.label + "_v1")), quantBody1, ths.get().join(f).no());
+									Expr quantBody1 = ths.get().join(merged).in(origBound);
+									quantBody1 = ExprITE.make(f.pos, ths.get().in(sigs.get(f.sig.label)),
+											quantBody1, ths.get().join(merged).no());
 									Expr e1mult = ExprQt.Op.ALL.make(f.pos, f.closingBracket, List.of(ths), quantBody1);
 									c1 = c1.and(e1mult);
 								} else {
 									Decl ths = s.decl;
-									Expr quantBody2 = ths.get().join(f).in(origBound);
-									quantBody2 = ExprITE.make(f.pos, ths.get().in(sigs.get(f.sig.label + "_v2")), quantBody2, ths.get().join(f).no());
+									Expr quantBody2 = ths.get().join(merged).in(origBound);
+									quantBody2 = ExprITE.make(f.pos, ths.get().in(sigs.get(f.sig.label)),
+											quantBody2, ths.get().join(merged).no());
 									Expr e2mult = ExprQt.Op.ALL.make(f.pos, f.closingBracket, List.of(ths), quantBody2);
 									c2 = c2.and(e2mult);
-								}							
+								}
 							} else {
 								// field needs to be suppressed
 								if (inV1) {
 									Decl ths = s.decl;
-									Expr quantBody1 = ths.get().in(sigs.get(f.sig.label + "_v1")).or(ths.get().join(f).no());
+									Expr quantBody1 = ths.get().in(sigs.get(f.sig.label))
+											.or(ths.get().join(merged).no());
 									Expr e1mult = ExprQt.Op.ALL.make(f.pos, f.closingBracket, List.of(ths), quantBody1);
 									c1 = c1.and(e1mult);
 								} else {
 									Decl ths = s.decl;
-									Expr quantBody2 = ths.get().in(sigs.get(f.sig.label + "_v2")).or(ths.get().join(f).no());
+									Expr quantBody2 = ths.get().in(sigs.get(f.sig.label))
+											.or(ths.get().join(merged).no());
 									Expr e2mult = ExprQt.Op.ALL.make(f.pos, f.closingBracket, List.of(ths), quantBody2);
 									c2 = c2.and(e2mult);
-								}															
+								}
 							}
 						}
-						s.addField(f.label, bound);
-						sigOverrideForField = null;
-						fieldsToAdd.pop();
 					} catch (RuntimeException e) {
 						if (e.getMessage() != null && e.getMessage().contains("Could not find merged field ")) {
 							String missingField = e.getMessage().replace("Could not find merged field ", "");
@@ -582,11 +659,12 @@ public class ModuleMerger {
 			ExprUnary.Op op = getMergeOp(((ExprUnary) e).op, ExprUnary.Op.NO);
 			f = mergedSig.addField(field.label, op.make(field.pos, ((ExprUnary) e).sub));
 			Decl ths = mergedSig.decl;
-			if (inC1) {				
+			if (inC1) {
 				Expr quantBody = ths.get().join(f).in(e);
 				// restriction of fields from SubsetSigs
 				if (v1iu.getFieldsFromSubsetSig().contains(field)) {
-					quantBody = ExprITE.make(field.pos, ths.get().in(sigs.get(field.sig.label + "_v1")), quantBody, ths.get().join(f).no());
+					quantBody = ExprITE.make(field.pos, ths.get().in(sigs.get(field.sig.label)), quantBody,
+							ths.get().join(f).no());
 				}
 				Expr e1mult = ExprQt.Op.ALL.make(field.pos, field.closingBracket, List.of(ths), quantBody);
 				c1 = c1.and(e1mult);
@@ -598,7 +676,8 @@ public class ModuleMerger {
 				Expr quantBody = ths.get().join(f).in(e);
 				// restriction of fields from SubsetSigs
 				if (v2iu.getFieldsFromSubsetSig().contains(field)) {
-					quantBody = ExprITE.make(field.pos, ths.get().in(sigs.get(field.sig.label + "_v2")), quantBody, ths.get().join(f).no());
+					quantBody = ExprITE.make(field.pos, ths.get().in(sigs.get(field.sig.label)), quantBody,
+							ths.get().join(f).no());
 				}
 
 				Expr e2mult = ExprQt.Op.ALL.make(field.pos, field.closingBracket, List.of(ths), quantBody);
@@ -610,7 +689,7 @@ public class ModuleMerger {
 				if (v1iu.getFieldsFromSubsetSig().contains(field)) {
 					Decl ths = mergedSig.decl;
 					// make empty if not in SubsetSig
-					Expr quantBody = ths.get().in(sigs.get(field.sig.label + "_v1")).or(ths.get().join(f).no());
+					Expr quantBody = ths.get().in(sigs.get(field.sig.label)).or(ths.get().join(f).no());
 					Expr e1mult = ExprQt.Op.ALL.make(field.pos, field.closingBracket, List.of(ths), quantBody);
 					c1 = c1.and(e1mult);
 				}
@@ -619,11 +698,11 @@ public class ModuleMerger {
 				if (v2iu.getFieldsFromSubsetSig().contains(field)) {
 					Decl ths = mergedSig.decl;
 					// make empty if not in SubsetSig
-					Expr quantBody = ths.get().in(sigs.get(field.sig.label + "_v2")).or(ths.get().join(f).no());
+					Expr quantBody = ths.get().in(sigs.get(field.sig.label)).or(ths.get().join(f).no());
 					Expr e2mult = ExprQt.Op.ALL.make(field.pos, field.closingBracket, List.of(ths), quantBody);
 					c2 = c2.and(e2mult);
 				}
-				
+
 				c1 = c1.and(f.decl().get().no());
 			}
 		}
@@ -692,7 +771,7 @@ public class ModuleMerger {
 				}
 			}
 			return s;
-		case "SubsetSig": 
+		case "SubsetSig":
 			SubsetSig sub = (SubsetSig) expr;
 			return sigs.get(sub.label);
 		case "ExprList":
@@ -724,7 +803,7 @@ public class ModuleMerger {
 			}
 			Type t = ev.type();
 			if (ev.label.equals("this")) {
-				System.err.println("FIXME");
+				// TODO check whether this is always right
 				return getExprVarToSig(ev);
 			}
 			ExprVar ret = ExprVar.make(ev.pos, ev.label, replaceSigRefs(t, inV1));
@@ -746,7 +825,7 @@ public class ModuleMerger {
 			}
 			return res;
 		case "ExprConstant":
-			maxInt = Math.max(maxInt,((ExprConstant)expr).num());
+			maxInt = Math.max(maxInt, ((ExprConstant) expr).num());
 			return expr;
 		case "ExprCall":
 			//
@@ -767,11 +846,13 @@ public class ModuleMerger {
 			Decl d = new Decl(null, null, null, letNames, evar);
 			names = new ArrayList<>(names);
 			names.add(d);
-			return ExprLet.make(let.pos, evar, replaceSigRefs(let.expr, names, inV1), replaceSigRefs(let.sub, names, inV1));
+			return ExprLet.make(let.pos, evar, replaceSigRefs(let.expr, names, inV1),
+					replaceSigRefs(let.sub, names, inV1));
 		case "ExprITE":
 			ExprITE ite = (ExprITE) expr;
 			return ExprITE.make(ite.pos, replaceSigRefs(ite.cond, List.copyOf(names), inV1),
-					replaceSigRefs(ite.left, List.copyOf(names), inV1), replaceSigRefs(ite.right, List.copyOf(names), inV1));
+					replaceSigRefs(ite.left, List.copyOf(names), inV1),
+					replaceSigRefs(ite.right, List.copyOf(names), inV1));
 		default:
 			System.out.println(expr.getClass().getSimpleName());
 			throw new RuntimeException(
@@ -785,8 +866,8 @@ public class ModuleMerger {
 		// ..\models-master\ietf-rfcs\rfc7617-BasicAuth\basic-auth.als
 		// fun Charset.binary[ s : String ] : Binary {this.maps[s]}
 		for (Decl d : fun.decls) {
-			decls.add(
-					new Decl(d.isPrivate, d.disjoint, d.disjoint2, replaceSigRefs(d.names, inV1), replaceSigRefs(d.expr, inV1)));
+			decls.add(new Decl(d.isPrivate, d.disjoint, d.disjoint2, replaceSigRefs(d.names, inV1),
+					replaceSigRefs(d.expr, inV1)));
 		}
 		Func fun2 = new Func(fun.pos, fun.label, decls, replaceSigRefs(fun.returnDecl, decls, inV1),
 				replaceSigRefs(fun.getBody(), decls, inV1));
@@ -821,7 +902,8 @@ public class ModuleMerger {
 				if (s == null) {
 					s = getInternalSig(pt.get(i).label);
 					if (s == null) {
-						throw new RuntimeException("Signature " + pt.get(i).label + " not found in merged signature map.");
+						throw new RuntimeException(
+								"Signature " + pt.get(i).label + " not found in merged signature map.");
 					}
 				}
 				if (product == null) {
@@ -885,7 +967,8 @@ public class ModuleMerger {
 		case "ExprBinary":
 			ExprBinary be = (ExprBinary) expr;
 			if (be.op.isArrow) {
-				return ExprBinary.Op.ARROW.make(be.pos, be.closingBracket, replaceArrows(be.left), replaceArrows(be.right));
+				return ExprBinary.Op.ARROW.make(be.pos, be.closingBracket, replaceArrows(be.left),
+						replaceArrows(be.right));
 			} else {
 				return be.op.make(be.pos, be.closingBracket, replaceArrows(be.left), replaceArrows(be.right));
 			}
