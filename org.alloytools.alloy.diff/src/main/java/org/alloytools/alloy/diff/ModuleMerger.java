@@ -583,10 +583,7 @@ public class ModuleMerger {
 					try {
 						sigOverrideForField = s.label;
 						Expr bound = replaceSigRefs(f.decl().expr, List.of(s.decl), inV1);
-						Field merged = s.addField(f.label, bound);
-						sigOverrideForField = null;
-						fieldsToAdd.pop();
-
+						
 						if ((inV1 ? v1iu : v2iu).getFieldsFromSubsetSig().contains(f)) {
 							// we have a field from a SubsetSig
 							if (bound instanceof ExprUnary) {
@@ -594,6 +591,8 @@ public class ModuleMerger {
 								Expr origBound = bound;
 								ExprUnary.Op op = getMergeOp(((ExprUnary) bound).op, Op.NO);
 								bound = op.make(f.pos, ((ExprUnary) bound).sub);
+								// case 1: add the now optional field 
+								Field merged = s.addField(f.label, bound);		
 								if (inV1) {
 									Decl ths = s.decl;
 									Expr quantBody1 = ths.get().join(merged).in(origBound);
@@ -610,6 +609,8 @@ public class ModuleMerger {
 									c2 = c2.and(e2mult);
 								}
 							} else {
+								// case 2: add relational field as is (it cannot have a multiplicity) 
+								Field merged = s.addField(f.label, bound);
 								// field needs to be suppressed
 								if (inV1) {
 									Decl ths = s.decl;
@@ -625,7 +626,13 @@ public class ModuleMerger {
 									c2 = c2.and(e2mult);
 								}
 							}
+						} else {
+							// case 3: just add field as is
+							s.addField(f.label, bound);
 						}
+						sigOverrideForField = null;
+						fieldsToAdd.pop();
+
 					} catch (RuntimeException e) {
 						if (e.getMessage() != null && e.getMessage().contains("Could not find merged field ")) {
 							String missingField = e.getMessage().replace("Could not find merged field ", "");

@@ -244,4 +244,16 @@ public class ModuleDiffTest {
 		A4Solution ans = ModuleDiff.diff("misc/empty.als", file, 3, true);
 		assertTrue(ans.satisfiable());
 	}
+	
+	@Test	
+	public void diffSubset1Subset() {
+		String v1 = "misc/inheritance/subset.als";
+		String v2 = "misc/inheritance/subset1.als";
+		
+		A4Solution ans = ModuleDiff.diff(v1, v2, 3, true);
+		assertTrue(ans.satisfiable());
+		
+		ans = ModuleDiff.diff(v2, v1, 3, true);
+		assertTrue(ans.satisfiable());
+	}
 }
