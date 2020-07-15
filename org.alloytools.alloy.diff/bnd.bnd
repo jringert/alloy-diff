@@ -24,3 +24,6 @@
 	@${repo;org.alloytools.kodkod.nativesat.x86-mac}, \
 	@${repo;org.alloytools.kodkod.nativesat.x86-windows}, \
 	@${repo;org.sat4j.core}
+-privatepackage: \
+	org.alloytools.alloy.diff,\
+	org.alloytools.alloy.instcheck

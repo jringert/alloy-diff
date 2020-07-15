@@ -185,7 +185,7 @@ import kodkod.engine.fol2sat.HigherOrderDeclException;
  * (2) the run() method in the instance watcher (in constructor) is launched
  * from a fresh thread
  */
-public final class SimpleGUIDiff extends SimpleGUI implements ComponentListener, Listener {
+public final class SimpleGUI implements ComponentListener, Listener {
 
 	MacUtil macUtil;
 
@@ -586,7 +586,7 @@ public final class SimpleGUIDiff extends SimpleGUI implements ComponentListener,
 			public void run() {
 				try {
 					method.setAccessible(true);
-					method.invoke(SimpleGUIDiff.this, new Object[] {});
+					method.invoke(SimpleGUI.this, new Object[] {});
 				} catch (Throwable ex) {
 					ex = new IllegalArgumentException("Failed call to " + name + "()", ex);
 					Thread.getDefaultUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), ex);
@@ -627,7 +627,7 @@ public final class SimpleGUIDiff extends SimpleGUI implements ComponentListener,
 			public void run(Object arg) {
 				try {
 					method.setAccessible(true);
-					method.invoke(SimpleGUIDiff.this, new Object[] { arg });
+					method.invoke(SimpleGUI.this, new Object[] { arg });
 				} catch (Throwable ex) {
 					ex = new IllegalArgumentException("Failed call to " + name + "(" + arg + ")", ex);
 					Thread.getDefaultUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), ex);
@@ -1881,7 +1881,7 @@ public final class SimpleGUIDiff extends SimpleGUI implements ComponentListener,
 			if (WorkerEngine.isBusy())
 				throw new RuntimeException(
 						"Alloy4 is currently executing a SAT solver command. Please wait until that command has finished.");
-			SimpleCallback1 cb = new SimpleCallback1(SimpleGUIDiff.this, viz, log, VerbosityPref.get().ordinal(),
+			SimpleCallback1 cb = new SimpleCallback1(SimpleGUI.this, viz, log, VerbosityPref.get().ordinal(),
 					latestAlloyVersionName, latestAlloyVersion);
 			SimpleTask2 task = new SimpleTask2();
 			task.filename = arg;
@@ -2078,7 +2078,7 @@ public final class SimpleGUIDiff extends SimpleGUI implements ComponentListener,
 
 			@Override
 			public void run() {
-				new SimpleGUIDiff(args);
+				new SimpleGUI(args);
 			}
 		});
 	}
@@ -2096,9 +2096,7 @@ public final class SimpleGUIDiff extends SimpleGUI implements ComponentListener,
 	 * The constructor; this method will be called by the AWT event thread, using
 	 * the "invokeLater" method.
 	 */
-	private SimpleGUIDiff(final String[] args) {
-		super(args);
-
+	private SimpleGUI(final String[] args) {
 		UIManager.put("ToolTip.font", new FontUIResource("Courier New", Font.PLAIN, 14));
 
 		// Register an exception handler for uncaught exceptions
@@ -2224,7 +2222,7 @@ public final class SimpleGUIDiff extends SimpleGUI implements ComponentListener,
 		if (Util.onMac()) {
 			frame.getRootPane().putClientProperty("apple.awt.fullscreenable", true);
 		}
-		SimpleGUIDiff.this.frame = frame;
+		SimpleGUI.this.frame = frame;
 		finishInit(args, windowWidth);
 	}
 

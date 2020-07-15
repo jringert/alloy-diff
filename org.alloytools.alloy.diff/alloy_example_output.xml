@@ -1,6 +1,6 @@
 <alloy builddate="1970-01-01T00:00:00Z">
 
-<instance bitwidth="4" maxseq="4" command="Run " filename="">
+<instance bitwidth="3" maxseq="3" command="Run  for 3 but 3 int, 3 Name, 3 A, 3 C" filename="">
 
 <sig label="seq/Int" ID="0" parentID="1" builtin="yes">
 </sig>
@@ -11,33 +11,58 @@
 <sig label="String" ID="3" parentID="2" builtin="yes">
 </sig>
 
-<sig label="this/B" ID="4" parentID="2">
-   <atom label="B$0"/>
+<sig label="this/Name" ID="4" parentID="2">
 </sig>
 
-<field label="f1" ID="5" parentID="4">
-   <types> <type ID="4"/> <type ID="6"/> </types>
+<field label="parent" ID="5" parentID="4">
+   <types> <type ID="4"/> <type ID="4"/> </types>
 </field>
 
 <sig label="this/A" ID="6" parentID="2">
-   <atom label="A$0"/>
-   <atom label="A$1"/>
-   <atom label="A$2"/>
 </sig>
 
-<field label="f1" ID="7" parentID="6">
-   <tuple> <atom label="A$0"/> <atom label="B$0"/> </tuple>
-   <tuple> <atom label="A$0"/> <atom label="A$2"/> </tuple>
-   <tuple> <atom label="A$1"/> <atom label="B$0"/> </tuple>
-   <tuple> <atom label="A$1"/> <atom label="A$0"/> </tuple>
-   <tuple> <atom label="A$1"/> <atom label="A$1"/> </tuple>
-   <tuple> <atom label="A$2"/> <atom label="B$0"/> </tuple>
-   <tuple> <atom label="A$2"/> <atom label="A$1"/> </tuple>
+<field label="a" ID="7" parentID="6">
    <types> <type ID="6"/> <type ID="6"/> </types>
-   <types> <type ID="6"/> <type ID="4"/> </types>
+</field>
+
+<field label="b" ID="8" parentID="6">
+   <types> <type ID="6"/> <type ID="6"/> </types>
+</field>
+
+<field label="d" ID="9" parentID="6">
+   <types> <type ID="6"/> <type ID="10"/> </types>
+</field>
+
+<sig label="this/C" ID="10" parentID="2">
+</sig>
+
+<field label="c" ID="11" parentID="10">
+   <types> <type ID="10"/> <type ID="10"/> </types>
+</field>
+
+<field label="b" ID="12" parentID="10">
+   <types> <type ID="10"/> <type ID="6"/> </types>
+</field>
+
+<field label="d" ID="13" parentID="10">
+   <types> <type ID="10"/> <type ID="10"/> </types>
 </field>
 
 <sig label="univ" ID="2" builtin="yes">
+</sig>
+
+<sig label="this/X1" ID="14">
+   <type ID="4"/>
+</sig>
+
+<sig label="this/B" ID="15">
+   <type ID="10"/>
+   <type ID="6"/>
+</sig>
+
+<sig label="this/D" ID="16">
+   <type ID="10"/>
+   <type ID="6"/>
 </sig>
 
 </instance>
