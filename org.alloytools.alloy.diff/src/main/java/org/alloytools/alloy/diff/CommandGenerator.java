@@ -31,7 +31,7 @@ public class CommandGenerator {
 	 *                 command)
 	 * @return
 	 */
-	public Command generateDiffCommand(Module v1, Module v2, int scope, boolean withPred) {
+	public Command generateDiffCommand(Module v1, Module v2, int scope, boolean withPred, Analysis a) {
 
 		Command cmd1 = v1.getAllCommands().get(0);
 		Command cmd2 = v2.getAllCommands().get(0);
@@ -141,7 +141,7 @@ public class CommandGenerator {
 			bitwidth++;
 		}
 
-		Command cmd = new Command(false, scope, bitwidth, -1, c2.and(c1.not()));
+		Command cmd = new Command(false, scope, bitwidth, -1, getExpr(c1, c2, a));
 
 		boolean changed = false;
 		// update scope based on both modules
@@ -181,10 +181,25 @@ public class CommandGenerator {
 		}
 
 		if (changed) {
-			cmd = cmd.change(c2.and(c1.not()));
+			cmd = cmd.change(getExpr(c1, c2, a));
 		}
 
 		return cmd;
+	}
+
+	private Expr getExpr(Expr c1, Expr c2, Analysis a) {
+		switch (a) {
+		case SemDiff:
+			return c2.and(c1.not());
+		case CommonInst:
+			return c1.and(c2);
+		case Equivalence:
+			return c1.iff(c2).not();
+
+		default:
+			break;
+		}
+		return ExprConstant.TRUE;
 	}
 
 }

@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import javax.swing.JMenu;
 
+import org.alloytools.alloy.diff.Analysis;
 import org.alloytools.alloy.diff.ModuleDiff;
 
 import edu.mit.csail.sdg.alloy4viz.VizGUI;
@@ -26,7 +27,7 @@ public class Compare {
 	public static A4Solution ans;
 	public static VizGUI viz;
 
-	public static void CompareModules(String leftFile, String rightFile, SwingLogPanel log) {
+	public static void CompareModules(String leftFile, String rightFile, String analysis, SwingLogPanel log) {
 		if (log != null) {
 			log.clearError();
 			log.logDivider();
@@ -35,8 +36,30 @@ public class Compare {
 					+ rightFile.substring(rightFile.lastIndexOf('\\') + 1));
 
 		}
-		
-		ans = ModuleDiff.diff(rightFile, leftFile, true);
+		switch (analysis) {
+		case "Semantic Diff":
+			ans = ModuleDiff.diff(rightFile, leftFile, -1, true, Analysis.SemDiff);
+			break;
+		case "Common Instances":
+			ans = ModuleDiff.diff(rightFile, leftFile, -1, true, Analysis.CommonInst);
+			break;
+		case "Equivalence":
+			ans = ModuleDiff.diff(rightFile, leftFile, -1, true, Analysis.Equivalence);
+			if (ans.satisfiable()) {
+				if (log != null) {
+					log.logRed("\nNot equivalent.\n Counter-example found. Visualizer opened.\n");
+				}
+			} else {
+				if (log != null) {
+					log.log("\nModels are equivalent.\n");
+				}
+			}
+			log.flush();
+			showViz(log);
+			return;				
+		default:
+			break;
+		}
 
 		if (ans.satisfiable()) {
 			if (log != null) {
@@ -51,6 +74,7 @@ public class Compare {
 				System.out.println(ans);
 			}
 		}
+
 		log.flush();
 		showViz(log);
 	}

@@ -118,11 +118,6 @@ public class CompareFilesDialog extends JDialog {
 
 	protected final void initUI() {
 		// setResizable(false);
-		JLabel dialogLabel = new JLabel();
-		dialogLabel.setText("Compare Alloy Models by computing differences.");
-
-		dialogLabel.setFont(new Font(FontName.get(), Font.PLAIN, FontSize.get()));
-		;
 
 		ArrayList<String> tabListNames = new ArrayList<String>();
 		int currentIndex = 0;
@@ -133,38 +128,66 @@ public class CompareFilesDialog extends JDialog {
 			tabListNames.add(tab.getFilename().substring(tab.getFilename().lastIndexOf('\\') + 1));
 		}
 
-		StringChoicePref tabNamesLeft = new StringChoicePref("LeftFile", "Find instances of ", tabListNames);
-		StringChoicePref tabNamesRight = new StringChoicePref("RightFile", "that are not instances of", tabListNames);
+		StringChoicePref tabAnalysis = new StringChoicePref("Analysis", "Analysis method: ", List.of(new String[] {"Semantic Diff", "Common Instances", "Equivalence"}));
+		tabAnalysis.setSelectedIndex(0);
+		StringChoicePref tabNamesLeft = new StringChoicePref("LeftFile", "", tabListNames);
+		StringChoicePref tabNamesRight = new StringChoicePref("RightFile", "", tabListNames);
 
-		JButton compareButton = new JButton("Compute Diff");
+			
+		JButton compareButton = new JButton("Analyze");
+		JLabel l1 = new JLabel("Find instances of ");
+		JLabel l2 = new JLabel("that are not instances of ");
 
 		tabNamesLeft.set(currentViewFile.substring(currentViewFile.lastIndexOf('\\') + 1));
 		tabNamesRight.setSelectedIndex(0);
 
-		add(makeGrid(dialogLabel, mkCombo(tabNamesLeft), mkCombo(tabNamesRight), mkButton(compareButton)));
+		add(makeGrid(mkCombo(tabAnalysis), l1, mkCombo(tabNamesLeft), l2, mkCombo(tabNamesRight), mkButton(compareButton)));
 
-		setTitle("Semantic Difference of Alloy Models");
+		setTitle("Semantic Analyses of Alloy Models");
 
 		pack();
 		setSize(getSize().width + 5, getSize().height + 5);
 		setResizable(true);
 		setLocationRelativeTo(null);
 		setAlwaysOnTop(false);
-
 		CompareFilesDialog dialog = this;
+
+		tabAnalysis.addChangeListener(new ChangeListener() {
+			
+			@Override
+			public void stateChanged(ChangeEvent arg0) {
+				switch (tabAnalysis.get()) {
+				case "Semantic Diff":
+					l1.setText("Find instances of ");
+					l2.setText("that are not instances of ");
+					break;
+				case "Common Instances":
+					l1.setText("Find instances of ");
+					l2.setText("common with ");
+					break;
+				case "Equivalence":
+					l1.setText("Check semantic equivalence of ");
+					l2.setText("and ");
+					break;					
+				default:
+					break;
+				}
+				dialog.repaint();				
+			}
+		});		
 		compareButton.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
 
 				Compare.CompareModules(fileMap.get(tabNamesLeft.getSelectedIndex()),
-						fileMap.get(tabNamesRight.getSelectedIndex()), log);
+						fileMap.get(tabNamesRight.getSelectedIndex()), tabAnalysis.get(), log);
 				dialog.dispose();
 			}
 		});
 	}
 
-	public static JPanel makeGrid(Container label, Container comboLeft, Container comboRight, Container buttonCompare) {
+	public static JPanel makeGrid(Container methodChoice, Container l1, Container comboLeft, Container l2,Container comboRight, Container buttonCompare) {
 		JPanel ans = new JPanel(new GridBagLayout());
 		GridBagConstraints gbc = new GridBagConstraints();
 
@@ -175,22 +198,31 @@ public class CompareFilesDialog extends JDialog {
 		gbc.fill = GridBagConstraints.HORIZONTAL;
 		gbc.gridx = 0;
 		gbc.gridy = 0;
-		ans.add(label, gbc);
+		ans.add(methodChoice, gbc);
 
 		gbc.fill = GridBagConstraints.HORIZONTAL;
 		gbc.gridx = 0;
 		gbc.gridy = 1;
+		ans.add(l1, gbc);
+
+		gbc.fill = GridBagConstraints.HORIZONTAL;
+		gbc.gridx = 0;
+		gbc.gridy = 2;
 		ans.add(comboLeft, gbc);
 
 		gbc.fill = GridBagConstraints.HORIZONTAL;
 		gbc.gridx = 0;
 		gbc.gridy = 3;
-		ans.add(comboRight, gbc);
+		ans.add(l2, gbc);
 
 		gbc.fill = GridBagConstraints.HORIZONTAL;
 		gbc.gridx = 0;
 		gbc.gridy = 4;
-		// gbc.gridwidth = 2;
+		ans.add(comboRight, gbc);
+
+		gbc.fill = GridBagConstraints.HORIZONTAL;
+		gbc.gridx = 0;
+		gbc.gridy = 5;
 		ans.add(buttonCompare, gbc);
 
 		return ans;

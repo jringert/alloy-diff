@@ -81,14 +81,14 @@ public class ModuleDiff {
 	 * @param rightFile
 	 * @return
 	 */
-	public static A4Solution diff(String leftFile, String rightFile, int scope, boolean withPred) {
+	public static A4Solution diff(String leftFile, String rightFile, int scope, boolean withPred, Analysis a) {
 
 		Module v1, v2;
 
 		v1 = CompUtil.parseEverything_fromFile(rep, null, leftFile);
 		v2 = CompUtil.parseEverything_fromFile(rep, null, rightFile);
 
-		return diff(v1, v2, scope, withPred);
+		return diff(v1, v2, scope, withPred, a);
 	}
 	
 	public static A4Solution diff(String leftFile, String rightFile, boolean withPred) {
@@ -106,7 +106,7 @@ public class ModuleDiff {
 	 * @param v2
 	 * @return
 	 */
-	private static A4Solution diff(Module v1, Module v2, int scope, boolean withPred) {
+	private static A4Solution diff(Module v1, Module v2, int scope, boolean withPred, Analysis a) {
 
 		options.skolemDepth = 1;
 		if (System.getProperty("os.name").contains("indows")) {
@@ -119,7 +119,7 @@ public class ModuleDiff {
 		Collection<Sig> sigs = m.mergeSigs(v1, v2);
 
 		CommandGenerator cg = new CommandGenerator(m);
-		Command diffCommand = cg.generateDiffCommand(v1, v2, scope, withPred);			
+		Command diffCommand = cg.generateDiffCommand(v1, v2, scope, withPred, a);			
 
 		A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, sigs, diffCommand, options);
 
@@ -131,5 +131,9 @@ public class ModuleDiff {
 		A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, v1.getAllReachableSigs(), v1.getAllCommands().get(0),
 				options);
 		return ans;
+	}
+
+	public static A4Solution diff(String leftFile, String rightFile, int scope, boolean withPred) {
+		return diff(leftFile, rightFile, scope, withPred, Analysis.SemDiff);
 	}
 }
