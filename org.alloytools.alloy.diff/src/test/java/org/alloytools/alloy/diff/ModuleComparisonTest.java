@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import org.alloytools.alloy.instcheck.CheckSolution;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -24,7 +25,8 @@ public class ModuleComparisonTest {
 
 	static String[] sigFolders = new String[] { "misc", "../models-master", "../iAlloy-dataset-master",
 			"../platinum-experiment-data/" };
-//	static String[] sigFolders = new String[] { "..\\models-master\\simple-models\\state-machine\\flip-flop.als"};
+	
+	static int scope = 8; // default scope of Alloy
 
 	@SuppressWarnings("resource")
 	public static Stream<Arguments> allAlloyFiles() throws Exception {
@@ -59,12 +61,27 @@ public class ModuleComparisonTest {
 					// ignore parsing errors
 					return;
 				}
-				Command v2cmd = new Command(false, -1, -1, -1, v2.getAllReachableFacts());
 
 				A4Options options = new A4Options();
-				options.solver = A4Options.SatSolver.SAT4J;
+				options.solver = A4Options.SatSolver.CryptoMiniSatJNI;
+				A4Solution sol = null;
 
-				A4Solution sol = ModuleDiff.diff(previous.toString(), f.toString(), true);
+				try {
+					sol = ModuleDiff.diff(previous.toString(), f.toString(), scope, false);
+				} catch (Exception e) {
+					if (e.getMessage() == null || 
+							(!e.getMessage().contains("Ordering") &&
+							!e.getMessage().contains("higher-order") &&
+							!e.getMessage().contains("integer.als") && 
+							!e.getMessage().contains("File cannot be found"))) {
+						throw e;
+					} else {
+						// exception was expected... stop here
+						return;
+					}
+				}
+
+				Command v2cmd = new Command(false, scope, sol.getBitwidth(), sol.getMaxSeq(), v2.getAllReachableFacts());
 				
 				List<A4Solution> sols = new ArrayList<>();
 
@@ -76,7 +93,7 @@ public class ModuleComparisonTest {
 				}
 				for (A4Solution s : sols) {
 					System.out.println(s);
-					assertTrue(CheckSolution.check(v2.getAllReachableUserDefinedSigs(), v2cmd, s, options));
+					assertTrue(CheckSolution.check(v2.getAllReachableUserDefinedSigs(), v2cmd, s, options), previous.toString() + " " + f.toString() + " have a witness that is not in the latter");
 				}
 			} catch (Exception e) {
 				previous = f;
@@ -86,5 +103,12 @@ public class ModuleComparisonTest {
 		previous = f;
 	}
 	
+	
+	@Test
+	void specialCase() {
+		previous = Paths.get("../iAlloy-dataset-master/mutant_version_set/arr/v4/arr.als");
+		Path current = Paths.get("../iAlloy-dataset-master/mutant_version_set/arr/v5/arr.als");
+		diffPreviousSelf(current);		
+	}
 
 }
