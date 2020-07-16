@@ -26,7 +26,7 @@ public class ModuleComparisonTest {
 	static String[] sigFolders = new String[] { "misc", "../models-master", "../iAlloy-dataset-master",
 			"../platinum-experiment-data/" };
 	
-	static int scope = 8; // default scope of Alloy
+	static int scope = 8; // -1 for default scope of Alloy
 
 	@SuppressWarnings("resource")
 	public static Stream<Arguments> allAlloyFiles() throws Exception {
@@ -77,6 +77,7 @@ public class ModuleComparisonTest {
 						throw e;
 					} else {
 						// exception was expected... stop here
+						previous = f;
 						return;
 					}
 				}
@@ -87,7 +88,7 @@ public class ModuleComparisonTest {
 
 				// have to calculate in advance otherwise solver has NullPointers when trying to
 				// get next solution
-				while (sol.satisfiable() && sols.size() < 1) {
+				while (sol.satisfiable() && sols.size() < 10) {
 					sols.add(sol);
 					sol = sol.next();
 				}
