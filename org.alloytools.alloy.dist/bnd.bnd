@@ -1,5 +1,5 @@
 
-Main-Class: edu.mit.csail.sdg.alloy4whole.SimpleGUIDiff
+Main-Class: edu.mit.csail.sdg.alloy4whole.SimpleGUI
 
 -buildpath: \
 	org.alloytools.alloy.application,\
@@ -10,8 +10,7 @@ Main-Class: edu.mit.csail.sdg.alloy4whole.SimpleGUIDiff
 	org.alloytools.kodkod.nativesat.amd64-linux;version=latest,\
 	org.alloytools.kodkod.nativesat.util;version=latest,\
 	org.alloytools.kodkod.nativesat.x86-linux;version=latest,\
-	org.alloytools.kodkod.nativesat.x86-mac;version=latest,\
-	org.alloytools.alloy.diff;version=latest
+	org.alloytools.kodkod.nativesat.x86-mac;version=latest
 	
 
 -sources: false

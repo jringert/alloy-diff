@@ -187,7 +187,7 @@ import kodkod.engine.fol2sat.HigherOrderDeclException;
  * (2) the run() method in the instance watcher (in constructor) is launched
  * from a fresh thread
  */
-public class SimpleGUI implements ComponentListener, Listener {
+public final class SimpleGUI implements ComponentListener, Listener {
 
     MacUtil macUtil;
 
@@ -1966,7 +1966,7 @@ public class SimpleGUI implements ComponentListener, Listener {
      * The constructor; this method will be called by the AWT event thread, using
      * the "invokeLater" method.
      */
-    protected SimpleGUI(final String[] args) {
+    private SimpleGUI(final String[] args) {
 
         UIManager.put("ToolTip.font", new FontUIResource("Courier New", Font.PLAIN, 14));
 
