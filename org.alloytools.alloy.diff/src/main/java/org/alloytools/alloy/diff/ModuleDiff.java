@@ -85,8 +85,12 @@ public class ModuleDiff {
 
 		Module v1, v2;
 
-		v1 = CompUtil.parseEverything_fromFile(rep, null, leftFile);
-		v2 = CompUtil.parseEverything_fromFile(rep, null, rightFile);
+		try {
+			v1 = CompUtil.parseEverything_fromFile(rep, null, leftFile);
+			v2 = CompUtil.parseEverything_fromFile(rep, null, rightFile);
+		} catch (Exception e) {
+			throw new RuntimeException("Alloy failed to parse module.", e);
+		}
 
 		return diff(v1, v2, scope, withPred, a);
 	}

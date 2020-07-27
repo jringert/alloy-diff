@@ -246,6 +246,7 @@ public class ModuleMerger {
 
 		// add containment of SubsetSigs in hierarchy:
 		// for sig A in B ... {} add c1/c2 A in B
+		// FIXME this must be that the child in the union of all its parents
 		for (Sig s : v1Sigs.values()) {
 			if (s instanceof SubsetSig) {
 				SubsetSig sub = (SubsetSig) s;

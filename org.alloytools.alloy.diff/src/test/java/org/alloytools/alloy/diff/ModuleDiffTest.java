@@ -117,9 +117,8 @@ public class ModuleDiffTest {
 		} catch (Exception e) {
 			if (e.getMessage() == null || 
 					(!e.getMessage().contains("Ordering") &&
-					!e.getMessage().contains("higher-order") &&
-					!e.getMessage().contains("integer.als") && 
-					!e.getMessage().contains("File cannot be found"))) {
+					!e.getMessage().contains("XXXhigher-order") &&
+					!e.getMessage().contains("Alloy failed to parse module"))) {
 				throw e;
 			}
 		}
@@ -139,8 +138,7 @@ public class ModuleDiffTest {
 				if (e.getMessage() == null || 
 						(!e.getMessage().contains("Ordering") &&
 						!e.getMessage().contains("higher-order") &&
-						!e.getMessage().contains("integer.als") && 
-						!e.getMessage().contains("File cannot be found"))) {
+						!e.getMessage().contains("Alloy failed to parse module"))) {
 					throw e;
 				}
 			}
