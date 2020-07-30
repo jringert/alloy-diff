@@ -1,6 +1,12 @@
 # Alloy Diff 
 
-See a [https://youtu.be/JA93sy2oHfo](small demo and an overview of the artifacts).
+This is the repository for the paper:
+
+[Jan Oliver Ringert](https://ringert.blogspot.com) and Syed Wali Waqee: _Semantic Comparisons of Alloy Models_. To appear in MoDELS 2020.
+
+* An author's [preprint of the paper is available here](docs/Semantic_Comparisons_of_Alloy_Models.pdf)
+* See a small demo and an overview of the artifacts: https://youtu.be/JA93sy2oHfo 
+* See out artifact submission: [docs/artefact_overview.pdf](docs/artefact_overview.pdf)
 
 More information on Alloy can be found at: http://alloytools.org/documentation.html.
 
@@ -8,13 +14,14 @@ More information on Alloy can be found at: http://alloytools.org/documentation.h
 
 We have started out from the [https://github.com/AlloyTools/org.alloytools.alloy](AlloyTools repository) and added various projects with our implementation, evaluation data, and experiments code as detailed below.
 
-## Main Alloy Diff Projects
+## New Alloy Diff Projects
 
 * [org.alloytools.alloy.diff](org.alloytools.alloy.diff) – The main implementation of merging Alloy models and for generating semantic comparison commands
 
 ## Modified Alloy Projects
 
 * [org.alloytools.alloy.application](org.alloytools.alloy.application) – The integration of our GUI extension for semantic comparisons of Alloy models
+* All other projects are described in Alloy's original [README](README_original.md)
 
 ## Dataset Projects
 
