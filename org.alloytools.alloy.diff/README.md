@@ -1,3 +1,3 @@
 # Alloy Diff Implementation
 
-Please see the main [readme file](../).
+Please see the main [readme file](../README.md).
