@@ -12,7 +12,7 @@ More information on Alloy can be found at: http://alloytools.org/documentation.h
 
 ## Added Projects
 
-We have started out from the [https://github.com/AlloyTools/org.alloytools.alloy](AlloyTools repository) and added various projects with our implementation, evaluation data, and experiments code as detailed below.
+We have started out from the [AlloyTools repository](https://github.com/AlloyTools/org.alloytools.alloy) and added various projects with our implementation, evaluation data, and experiments code as detailed below.
 
 ## New Alloy Diff Projects
 
@@ -28,9 +28,9 @@ We have started out from the [https://github.com/AlloyTools/org.alloytools.alloy
 These projects include datasets from other paper that we have used for evaluation.
 
 * [experiments](experiments) – scripts, binaries, and resulting CSVs from our experiments
-* [iAlloy-dataset-master](iAlloy-dataset-master) – From [https://github.com/wenxiwang/iAlloy-dataset](https://github.com/wenxiwang/iAlloy-dataset)
-* [platinum-experiment-data](platinum-experiment-data) – From [https://sites.google.com/view/platinum-repository](https://sites.google.com/view/platinum-repository)
-* [models-master](models-master) – From [https://github.com/AlloyTools/models](https://github.com/AlloyTools/models)
+* [iAlloy-dataset-master](iAlloy-dataset-master) – from [https://github.com/wenxiwang/iAlloy-dataset](https://github.com/wenxiwang/iAlloy-dataset)
+* [platinum-experiment-data](platinum-experiment-data) – from [https://sites.google.com/view/platinum-repository](https://sites.google.com/view/platinum-repository)
+* [models-master](models-master) – from [https://github.com/AlloyTools/models](https://github.com/AlloyTools/models)
 
 
 ## Additional (Experimental) Projects
