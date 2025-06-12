@@ -11,9 +11,93 @@ import edu.mit.csail.sdg.parser.CompUtil;
 import edu.mit.csail.sdg.translator.A4Options;
 import edu.mit.csail.sdg.translator.A4Solution;
 import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
+import edu.mit.csail.sdg.translator.A4Options.SatSolver;
 
 public class ModuleDiff {
+
+	public static SatSolver solver = SatSolver.SAT4J; // default solver
 	public static int totalVarsSAT = 0;
+
+	public static void main(String[] args) {
+		if (args.length < 2) {
+			System.out.println("Usage: ModuleDiff <leftFile> <rightFile> [analysis:SemDiff|CommonInst|Equivalence] [scope] [withPred] [solver:sat4j|cryptoMinisat|minisat]");
+			return;
+		}
+		String leftFile = args[0];
+		String rightFile = args[1];
+		int scope = -1;
+		boolean withPred = true;
+
+		Analysis analysis = Analysis.SemDiff; // default analysis
+		if (args.length >= 3 && args[2] != null && !args[2].isEmpty()) {
+			analysis = Analysis.valueOf(args[2]);
+			if (analysis == null) {
+				System.out.println("Unknown analysis: " + args[2]);
+				return;
+			}
+		} else {
+			System.out.println("Using default analysis: " + analysis);
+		}
+
+		if (args.length >= 4) {
+			scope = Integer.parseInt(args[3]);
+		} else {
+			System.out.println("Using default scope: " + scope);
+		}
+
+		if (args.length >= 5) {
+			withPred = Boolean.parseBoolean(args[4]);
+		} else {
+			System.out.println("Using default withPred: " + withPred);
+		}
+
+		if (args.length >= 6) {
+			String solverName = args[5].toLowerCase();
+			if (solverName.equals("sat4j")) {
+				solver = SatSolver.SAT4J;
+			} else if (solverName.equals("cryptominisat")) {
+				solver = SatSolver.CryptoMiniSatJNI;
+			} else if (solverName.equals("minisat")) {
+				solver = SatSolver.MiniSatJNI;
+			} else {
+				System.out.println("Unknown solver: " + solverName);
+				return;
+			}
+		} else {
+			System.out.println("Using default solver: " + solver);
+		}
+
+		A4Solution solution = diff(leftFile, rightFile, scope, withPred, analysis);
+		switch (analysis) {
+			case SemDiff:
+				if (!solution.satisfiable()) {
+					System.out.println("The two modules are equivalent for the given scope.");
+				} else {
+					System.out.println("Diff result: \n" + solution);
+				}
+				break;
+			case CommonInst:
+				if (!solution.satisfiable()) {
+					System.out.println("There are no common instances for the two modules and this scope.");
+				} else {
+					System.out.println("Common instances found: \n" + solution);
+				}
+				break;
+			case Equivalence:
+				System.out.println("Equivalence result: " + solution);
+				if (!solution.satisfiable()) {
+					System.out.println("The two modules are equivalent.");
+				} else {
+					System.out.println("The two modules are not equivalent.");
+					System.out.println("Diff result: \n" + solution);
+				}
+				break;
+		
+			default:
+				break;
+		}
+	}
+
 
 	public static A4Reporter rep = new A4Reporter() {
 		private boolean quiet = true;
