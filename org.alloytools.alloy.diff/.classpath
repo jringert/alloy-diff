@@ -11,8 +11,6 @@
 	<classpathentry kind="src" path="/org.alloytools.alloy.core"/>
 	<classpathentry kind="src" path="/org.alloytools.alloy.application"/>
 	<classpathentry kind="src" path="/org.alloytools.kodkod.core"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/org.alloytools.alloy.java"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/org.alloytools.kodkod.nativesat"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/org.alloytools.util"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
