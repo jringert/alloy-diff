@@ -10,6 +10,18 @@ This is the repository for the paper:
 
 More information on Alloy can be found at: http://alloytools.org/documentation.html.
 
+## Updates 2025-06-12
+
+You can build the project with gradle via `./gradlew build -x test` (skipping the tests). This gives you a jar file in `org.alloytools.alloy.diff/target/org.alloytools.alloy.diff.jar`.
+  - directly run it to use the Alloy Diff UI 
+    `java -jar org.alloytools.alloy.diff/target/org.alloytools.alloy.diff.jar`
+  - or use it as a library in your own project by adding the jar to your classpath
+  - or run a command line version as `java -cp org.alloytools.alloy.diff/target/org.alloytools.alloy.diff.jar org.alloytools.alloy.diff.ModuleDiff` to see the command line options an examle would be this:
+```bash
+java -cp org.alloytools.alloy.diff/target/org.alloytools.alloy.diff.jar org.alloytools.alloy.diff.ModuleDiff .\org.alloytools.alloy.extra\extra\models\book\chapter2\addressBook1a.als .\org.alloytools.alloy.extra\extra\models\book\chapter2\addressBook1b.als CommonInst 6 false
+```
+
+
 ## Added Projects
 
 We have started out from the [AlloyTools repository](https://github.com/AlloyTools/org.alloytools.alloy) and added various projects with our implementation, evaluation data, and experiments code as detailed below.

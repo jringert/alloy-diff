@@ -15,7 +15,8 @@ import edu.mit.csail.sdg.translator.A4Options.SatSolver;
 
 public class ModuleDiff {
 
-	public static SatSolver solver = SatSolver.SAT4J; // default solver
+	public static SatSolver solver = null;
+	
 	public static int totalVarsSAT = 0;
 
 	public static void main(String[] args) {
@@ -197,7 +198,9 @@ public class ModuleDiff {
 	private static A4Solution diff(Module v1, Module v2, int scope, boolean withPred, Analysis a) {
 
 		options.skolemDepth = 1;
-		if (System.getProperty("os.name").contains("indows")) {
+		if (solver != null) {
+			options.solver = solver;
+		} else if (System.getProperty("os.name").contains("indows")) {
 			options.solver = A4Options.SatSolver.SAT4J;
 		} else {
 			options.solver = A4Options.SatSolver.CryptoMiniSatJNI;
